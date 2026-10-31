@@ -31,3 +31,8 @@ For every decision that affects the score, BEFORE I choose:
 4. What would change your recommendation (one line).
 Then STOP and wait for my choice. Minor decisions: pick a sensible default and report it in one line.
 Max 5 score-affecting decisions per day.
+
+## Current state
+- Day 1 done: Django skeleton and domain modules (risk, geo, weather_time, ranking) built and tested.
+- D1–D5 and the Day 2 carry-forward list are in DECISIONS.md.
+- Next: the Day 2 route comparison endpoint. Nothing connects the domain modules to the APIs yet.
