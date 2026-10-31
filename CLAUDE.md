@@ -21,3 +21,13 @@ using weather, load weight and travel time.
 - DECISIONS.md: one line per decision.
 - LOOM_NOTES.md: 3–5 bullets per day.
 - PROGRESS.md: hours per block + running total.
+
+## Decision protocol
+For every decision that affects the score, BEFORE I choose:
+1. Options: 2–3, each with its main trade-off in one line.
+2. Your judgment: which you recommend and why, based on evidence (repo code, real API output,
+   the brief). If you disagree with a suggested default, say so plainly and why.
+3. "Why" for my defence: 2–3 sentences I can say in the Loom or an interview.
+4. What would change your recommendation (one line).
+Then STOP and wait for my choice. Minor decisions: pick a sensible default and report it in one line.
+Max 5 score-affecting decisions per day.
