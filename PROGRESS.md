@@ -1,6 +1,6 @@
 # Progress (16h budget)
 
-Day 1 | A ___ | B ___ | C1 ___ | C2–C3 ___ | D ___ | Day total ___ | Running total ___ / 16h | Status: Day 1 plan complete
+Day 1 | 2.5h (1.5h build + ~1h planning and setup) | Running total 2.5h / 16h | Status: Day 1 plan complete
 
 ## Current state
 Exists:
