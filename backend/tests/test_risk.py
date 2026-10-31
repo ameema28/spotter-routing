@@ -85,6 +85,8 @@ def test_inputs_are_rounded_before_comparing(classify, value, expected):
     (44.99, 45_000, S),
     (45, 45_000, NT),
     (44.999, 45_000, NT),  # rounds to 45.00, same rounding as classify_wind
+    (35, 40_001, S),       # lower wind edge of each load rule, not only the upper one
+    (45, 30_001, NT),
 ])
 def test_load_rules(wind_mph, load_lb, expected):
     assert apply_load_rules(classify_wind(wind_mph), wind_mph, load_lb) == expected
