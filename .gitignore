@@ -1,6 +1,26 @@
+# Python
 .venv/
-.env
-node_modules/
+venv/
 __pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Django
 db.sqlite3
+staticfiles/
+*.log
+
+# Secrets (keep the example file)
+.env
+.env.*
+!.env.example
+
+# Frontend
+node_modules/
 dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
