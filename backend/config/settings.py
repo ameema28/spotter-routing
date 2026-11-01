@@ -25,7 +25,8 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-local-dev-only')
+# `or`, not a getenv default: a blank value in .env must fall back like a missing one.
+SECRET_KEY = os.getenv('SECRET_KEY') or 'django-insecure-local-dev-only'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Off unless explicitly enabled, so a missing .env fails safe.
@@ -98,6 +99,8 @@ DATABASES = {
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        # The default of 300 would evict weather points during a single 10-mile comparison.
+        'OPTIONS': {'MAX_ENTRIES': 2000},
     }
 }
 

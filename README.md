@@ -11,10 +11,9 @@ pip install -r backend/requirements.txt
 Copy-Item backend\.env.example backend\.env
 ```
 
-Edit `backend/.env` and set these three values. Leaving `SECRET_KEY` blank breaks the app, because a blank value replaces the local fallback:
+Edit `backend/.env` and set these two values. `SECRET_KEY` can stay blank locally, because it has a development fallback:
 
 ```
-SECRET_KEY=any-non-empty-value-for-local-use
 DEBUG=True
 MAPBOX_TOKEN=your-mapbox-token
 ```
