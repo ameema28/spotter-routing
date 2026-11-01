@@ -10,6 +10,7 @@ htmlcov/
 # Django
 db.sqlite3
 staticfiles/
+backend/.cache/
 *.log
 
 # Secrets (keep the example file)

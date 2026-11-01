@@ -21,6 +21,12 @@ def test_set_secret_key_is_used(monkeypatch):
     assert load_settings()['SECRET_KEY'] == 'from-the-environment'
 
 
+def test_cache_is_file_based_so_workers_and_restarts_share_it():
+    cache = load_settings()['CACHES']['default']
+    assert cache['BACKEND'].endswith('FileBasedCache')
+    assert Path(cache['LOCATION']).is_relative_to(django_settings.BASE_DIR)
+
+
 def test_blank_debug_is_off(monkeypatch):
     monkeypatch.setenv('DEBUG', '')
     assert load_settings()['DEBUG'] is False

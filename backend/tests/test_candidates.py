@@ -1,4 +1,5 @@
 import threading
+import time
 
 import pytest
 
@@ -43,7 +44,8 @@ def directions(monkeypatch):
 
 
 def test_returns_the_main_routes_and_every_candidate(directions):
-    main_routes, candidates = generate_candidates(ORIGIN, DESTINATION)
+    main_routes, candidates, late = generate_candidates(ORIGIN, DESTINATION)
+    assert late == 0
     assert [item.duration_s for item in main_routes] == [10, 20]
     assert [(item.label, item.route.duration_s) for item in candidates] == [
         ('generated alternative (avoids tolls)', 30),
@@ -68,7 +70,7 @@ def test_via_uses_stored_hub_coordinates(directions):
 
 
 def test_short_trip_tries_avoiding_tolls_only(directions):
-    _, candidates = generate_candidates(ORIGIN, NEARBY_DESTINATION)
+    _, candidates, _ = generate_candidates(ORIGIN, NEARBY_DESTINATION)
     assert len(directions) == 2
     assert [item.label for item in candidates] == ['generated alternative (avoids tolls)']
 
@@ -82,7 +84,7 @@ def test_all_calls_run_at_the_same_time(monkeypatch):
         return [route(1)]
 
     monkeypatch.setattr(candidates_module.mapbox, 'directions', fake)
-    main_routes, candidates = generate_candidates(ORIGIN, DESTINATION)
+    main_routes, candidates, _ = generate_candidates(ORIGIN, DESTINATION)
     assert len(main_routes) == 1
     assert len(candidates) == 3
 
@@ -105,7 +107,7 @@ def test_a_failed_toll_candidate_is_skipped(monkeypatch):
         return [route(1)]
 
     monkeypatch.setattr(candidates_module.mapbox, 'directions', fake)
-    _, candidates = generate_candidates(ORIGIN, DESTINATION)
+    _, candidates, _ = generate_candidates(ORIGIN, DESTINATION)
     assert [item.label for item in candidates] == [
         'generated alternative (via Alpha)', 'generated alternative (via Beta)',
     ]
@@ -118,7 +120,7 @@ def test_a_failed_hub_candidate_is_skipped(monkeypatch):
         return [route(1)]
 
     monkeypatch.setattr(candidates_module.mapbox, 'directions', fake)
-    _, candidates = generate_candidates(ORIGIN, DESTINATION)
+    _, candidates, _ = generate_candidates(ORIGIN, DESTINATION)
     assert 'generated alternative (via Alpha)' not in [item.label for item in candidates]
     assert len(candidates) == 2
 
@@ -130,6 +132,43 @@ def test_all_candidates_failing_still_returns_the_main_routes(monkeypatch):
         return [route(1)]
 
     monkeypatch.setattr(candidates_module.mapbox, 'directions', fake)
-    main_routes, candidates = generate_candidates(ORIGIN, DESTINATION)
+    main_routes, candidates, _ = generate_candidates(ORIGIN, DESTINATION)
     assert len(main_routes) == 1
     assert candidates == []
+
+
+def test_late_candidates_are_dropped_and_counted(monkeypatch):
+    monkeypatch.setattr(candidates_module, 'CANDIDATE_DEADLINE_SECONDS', 0.05)
+    release = threading.Event()
+
+    def fake(origin, destination, via=None, exclude=None):
+        if via:
+            release.wait(5)
+        return [route(1)]
+
+    monkeypatch.setattr(candidates_module.mapbox, 'directions', fake)
+    started = time.perf_counter()
+    main_routes, candidates, late = generate_candidates(ORIGIN, DESTINATION)
+    elapsed = time.perf_counter() - started
+    release.set()
+
+    assert elapsed < 2    # the search does not wait for the slow calls to finish
+    assert len(main_routes) == 1
+    assert [item.label for item in candidates] == ['generated alternative (avoids tolls)']
+    assert late == 2
+
+
+def test_the_deadline_starts_after_the_main_call(monkeypatch):
+    monkeypatch.setattr(candidates_module, 'CANDIDATE_DEADLINE_SECONDS', 0.2)
+
+    def fake(origin, destination, via=None, exclude=None):
+        if via or exclude:
+            time.sleep(0.3)
+        else:
+            time.sleep(0.2)
+        return [route(1)]
+
+    monkeypatch.setattr(candidates_module.mapbox, 'directions', fake)
+    _, candidates, late = generate_candidates(ORIGIN, DESTINATION)
+    assert late == 0
+    assert len(candidates) == 3

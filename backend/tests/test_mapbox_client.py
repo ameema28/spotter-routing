@@ -6,7 +6,7 @@ import pytest
 import requests
 
 from routing.services import mapbox
-from routing.services.errors import ProviderError
+from routing.services.errors import PlaceNotFound, ProviderError, ProviderTimeout, RouteNotFound
 
 FAKE_TOKEN = 'pk.fake-token-for-tests'
 FIXTURE = Path(__file__).parent / 'fixtures' / 'mapbox_directions_dallas_chicago.json'
@@ -91,9 +91,9 @@ def test_geocode_is_not_cached(respond_with):
     assert len(calls) == 2
 
 
-def test_geocode_without_a_match_is_a_provider_error(respond_with):
+def test_geocode_without_a_match_is_place_not_found(respond_with):
     respond_with(FakeResponse({'features': []}))
-    with pytest.raises(ProviderError) as caught:
+    with pytest.raises(PlaceNotFound) as caught:
         mapbox.geocode('Nowhere')
     assert_safe(caught.value)
 
@@ -164,6 +164,23 @@ def test_annotations_that_do_not_fit_the_geometry_are_rejected(respond_with):
 def test_bad_responses_are_safe_provider_errors(respond_with, response):
     respond_with(response)
     with pytest.raises(ProviderError) as caught:
+        mapbox.directions(DALLAS, CHICAGO)
+    assert_safe(caught.value)
+
+
+def test_no_route_is_its_own_error(respond_with):
+    respond_with(FakeResponse({'code': 'NoRoute', 'routes': []}))
+    with pytest.raises(RouteNotFound) as caught:
+        mapbox.directions(DALLAS, CHICAGO)
+    assert_safe(caught.value)
+
+
+def test_a_timeout_is_its_own_safe_error(monkeypatch):
+    def fail(url, params=None, timeout=None):
+        raise requests.Timeout(f'timed out: https://api.mapbox.com/x?access_token={FAKE_TOKEN}')
+
+    monkeypatch.setattr(mapbox.requests, 'get', fail)
+    with pytest.raises(ProviderTimeout) as caught:
         mapbox.directions(DALLAS, CHICAGO)
     assert_safe(caught.value)
 

@@ -31,7 +31,7 @@ def miles_hours(route):
 
 def run_trip(name, origin, destination):
     started = time.perf_counter()
-    routes, candidates = generate_candidates(origin, destination)
+    routes, candidates, _ = generate_candidates(origin, destination)
     ms = round((time.perf_counter() - started) * 1000)
     chosen, reviews = select_extra_routes(candidates, routes)
 

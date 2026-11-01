@@ -1,6 +1,8 @@
 import json
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import requests
@@ -8,16 +10,17 @@ from django.conf import settings
 from django.core.cache import cache
 
 from routing.services import openmeteo
-from routing.services.errors import ProviderError
+from routing.services.errors import ProviderBusy, ProviderError, ProviderTimeout
 
 FIXTURE = Path(__file__).parent / 'fixtures' / 'openmeteo_5pts.json'
 LOCATIONS = json.loads(FIXTURE.read_text(encoding='utf-8'))
 
 
 class FakeResponse:
-    def __init__(self, body=None, status_code=200):
+    def __init__(self, body=None, status_code=200, headers=None):
         self.body = body
         self.status_code = status_code
+        self.headers = headers or {}
 
     def json(self):
         if self.body is None:
@@ -112,7 +115,7 @@ def test_request_uses_the_spike_parameters(api):
 
 def test_230_points_split_into_100_100_30(api):
     forecasts = openmeteo.fetch_hourly(spaced_points(230), 7)
-    assert [call['count'] for call in api] == [100, 100, 30]
+    assert sorted(call['count'] for call in api) == [30, 100, 100]
     assert len(forecasts) == 230
 
 
@@ -179,13 +182,12 @@ def test_a_different_forecast_length_is_a_different_cache_entry(api):
 
 def test_entries_use_the_30_minute_ttl(api, monkeypatch):
     seen = {}
-    real_set_many = cache.set_many
 
-    def spy(data, timeout=None, **kwargs):
+    def spy(data, timeout=None):
         seen['timeout'] = timeout
-        return real_set_many(data, timeout, **kwargs)
+        return []
 
-    monkeypatch.setattr(openmeteo.cache, 'set_many', spy)
+    monkeypatch.setattr(openmeteo, 'cache', SimpleNamespace(get_many=cache.get_many, set_many=spy))
     openmeteo.fetch_hourly([point(32)], 7)
     assert seen['timeout'] == 30 * 60
 
@@ -203,17 +205,16 @@ def test_the_cache_holds_more_than_a_large_comparison(api):
 def test_batches_that_succeeded_stay_cached_after_a_later_failure(monkeypatch):
     attempts = []
 
-    def fail_on_second_batch(url, params=None, timeout=None):
-        attempts.append(params)
-        if len(attempts) == 2:
+    def fail_the_small_batch(url, params=None, timeout=None):
+        count = len(params['latitude'].split(','))
+        if count == 50:
             return FakeResponse({'error': True}, status_code=500)
-        return FakeResponse([LOCATIONS[0]] * len(params['latitude'].split(',')))
+        return FakeResponse([LOCATIONS[0]] * count)
 
-    monkeypatch.setattr(openmeteo.requests, 'get', fail_on_second_batch)
+    monkeypatch.setattr(openmeteo.requests, 'get', fail_the_small_batch)
     with pytest.raises(ProviderError):
         openmeteo.fetch_hourly(spaced_points(150), 7)
 
-    attempts.clear()
     monkeypatch.setattr(openmeteo.requests, 'get', lambda url, params=None, timeout=None: (
         attempts.append(params) or FakeResponse([LOCATIONS[0]] * len(params['latitude'].split(',')))
     ))
@@ -259,3 +260,101 @@ def test_network_errors_do_not_chain_the_url(monkeypatch):
         openmeteo.fetch_hourly([point(32)], 7)
     assert 'api.open-meteo.com' not in str(caught.value)
     assert caught.value.__context__ is None
+
+
+def test_a_timeout_is_its_own_error(monkeypatch):
+    def fail(url, params=None, timeout=None):
+        raise requests.Timeout('timed out')
+
+    monkeypatch.setattr(openmeteo.requests, 'get', fail)
+    with pytest.raises(ProviderTimeout):
+        openmeteo.fetch_hourly([point(32)], 7)
+
+
+def test_429_is_a_clear_busy_error_with_no_retry(monkeypatch):
+    calls = []
+
+    def limited(url, params=None, timeout=None):
+        calls.append(params)
+        return FakeResponse({'error': True, 'reason': 'Minutely API request limit exceeded'}, status_code=429)
+
+    monkeypatch.setattr(openmeteo.requests, 'get', limited)
+    with pytest.raises(ProviderBusy) as caught:
+        openmeteo.fetch_hourly([point(32)], 7)
+    assert str(caught.value) == 'Weather service is busy — please try again in a minute'
+    assert caught.value.retry_after is None
+    assert len(calls) == 1
+
+
+def test_429_keeps_retry_after_when_sent(monkeypatch):
+    monkeypatch.setattr(openmeteo.requests, 'get', lambda *args, **kwargs: FakeResponse(
+        {'error': True}, status_code=429, headers={'Retry-After': '30'}))
+    with pytest.raises(ProviderBusy) as caught:
+        openmeteo.fetch_hourly([point(32)], 7)
+    assert caught.value.retry_after == '30'
+
+
+def test_batches_run_at_the_same_time(monkeypatch):
+    # Each batch waits for the others, so fetching them in turn would break the barrier.
+    barrier = threading.Barrier(3, timeout=5)
+
+    def fake(url, params=None, timeout=None):
+        barrier.wait()
+        return FakeResponse([LOCATIONS[0]] * len(params['latitude'].split(',')))
+
+    monkeypatch.setattr(openmeteo.requests, 'get', fake)
+    assert len(openmeteo.fetch_hourly(spaced_points(250), 7)) == 250
+
+
+def test_fetch_many_returns_each_group_in_input_order(api):
+    required, optional = openmeteo.fetch_many([point(32)], [point(33), point(34)], 7)
+    assert len(required) == 1
+    assert len(optional) == 2
+
+
+def test_a_cell_in_both_groups_is_requested_once(api):
+    openmeteo.fetch_many([point(32)], [point(32), point(33)], 7)
+    assert sum(call['count'] for call in api) == 2
+
+
+def test_required_and_optional_use_separate_batches(api):
+    openmeteo.fetch_many([point(32)], [point(33)], 7)
+    assert sorted(call['count'] for call in api) == [1, 1]
+
+
+def test_a_failed_optional_batch_gives_none_and_keeps_the_required_data(monkeypatch):
+    def fake(url, params=None, timeout=None):
+        if params['latitude'].startswith('33'):
+            return FakeResponse({'error': True}, status_code=429)
+        return FakeResponse(LOCATIONS[0])
+
+    monkeypatch.setattr(openmeteo.requests, 'get', fake)
+    required, optional = openmeteo.fetch_many([point(32)], [point(33)], 7)
+    assert len(required) == 1
+    assert optional is None
+
+
+def test_a_failed_required_batch_raises_even_if_optional_worked(monkeypatch):
+    def fake(url, params=None, timeout=None):
+        if params['latitude'].startswith('32'):
+            return FakeResponse({'error': True}, status_code=500)
+        return FakeResponse(LOCATIONS[0])
+
+    monkeypatch.setattr(openmeteo.requests, 'get', fake)
+    with pytest.raises(ProviderError):
+        openmeteo.fetch_many([point(32)], [point(33)], 7)
+
+
+def test_optional_cells_fully_cached_need_no_request(api):
+    openmeteo.fetch_hourly([point(33)], 7)
+    api.clear()
+    _, optional = openmeteo.fetch_many([point(32)], [point(33)], 7)
+    assert len(optional) == 1
+    assert [call['count'] for call in api] == [1]
+
+
+def test_cached_values_survive_being_read_back(api):
+    first = openmeteo.fetch_hourly([point(32)], 7)[0]
+    second = openmeteo.fetch_hourly([point(32)], 7)[0]
+    assert second.times[0].tzinfo == first.times[0].tzinfo
+    assert second == first

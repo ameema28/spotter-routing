@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import requests
 from django.conf import settings
 
-from routing.services.errors import ProviderError
+from routing.services.errors import PlaceNotFound, ProviderError, ProviderTimeout, RouteNotFound
 
 GEOCODE_URL = 'https://api.mapbox.com/search/geocode/v6/forward'
 DIRECTIONS_URL = 'https://api.mapbox.com/directions/v5/mapbox/driving/{coords}'
@@ -30,9 +30,10 @@ def _get_json(url: str, params: dict) -> dict:
         response = requests.get(url, params={**params, 'access_token': settings.MAPBOX_TOKEN},
                                 timeout=TIMEOUT_SECONDS)
     except requests.RequestException as error:
-        failure = type(error).__name__
+        failure = type(error)
     if failure:
-        raise ProviderError(f'Mapbox request failed ({failure})')
+        kind = ProviderTimeout if issubclass(failure, requests.Timeout) else ProviderError
+        raise kind(f'Mapbox request failed ({failure.__name__})')
     return _parse_body(response)
 
 
@@ -53,7 +54,7 @@ def geocode(query: str) -> dict:
         lon, lat = feature['geometry']['coordinates']
         return {'lat': lat, 'lon': lon, 'label': feature['properties']['full_address']}
     except (KeyError, IndexError, TypeError, ValueError):
-        raise ProviderError('Mapbox found no US location for that place') from None
+        raise PlaceNotFound('No US location found for that place') from None
 
 
 def _parse_route(raw: dict) -> Route:
@@ -87,6 +88,8 @@ def directions(origin: dict, destination: dict, via: dict | None = None,
     if exclude:
         params['exclude'] = exclude
     body = _get_json(DIRECTIONS_URL.format(coords=coords), params)
+    if body.get('code') == 'NoRoute':
+        raise RouteNotFound('No drivable route between those places')
     if body.get('code') != 'Ok' or not body.get('routes'):
         raise ProviderError(f'Mapbox found no route ({body.get("code")})')
     try:

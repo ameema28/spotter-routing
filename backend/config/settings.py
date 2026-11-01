@@ -53,6 +53,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     # Must run before CommonMiddleware so its responses also get CORS headers.
     'corsheaders.middleware.CorsMiddleware',
@@ -98,7 +99,10 @@ DATABASES = {
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        # On disk so restarts keep the cached weather and every worker shares it: each location
+        # re-fetched counts against Open-Meteo's limit.
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': BASE_DIR / '.cache' / 'django',
         # The default of 300 would evict weather points during a single 10-mile comparison.
         'OPTIONS': {'MAX_ENTRIES': 2000},
     }

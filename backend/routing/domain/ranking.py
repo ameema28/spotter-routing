@@ -1,6 +1,7 @@
 """Route summary, ranking and recommendation from the PDF's "Prefer" list and decision D5."""
 from dataclasses import dataclass
 
+from routing.domain.formatting import format_duration
 from routing.domain.risk import RiskLevel
 
 # D5: a route over this share of unknown miles can't be called safe.
@@ -101,9 +102,11 @@ def rank_routes(summaries: list[RouteSummary]) -> list[RouteSummary]:
     return sorted(summaries, key=_rank_key)
 
 
-def _hours_pair(best: RouteSummary, other: RouteSummary) -> str:
-    decimals = 1 if round(best.duration_s / 3600, 1) != round(other.duration_s / 3600, 1) else 2
-    return f'{best.duration_s / 3600:.{decimals}f} h vs {other.duration_s / 3600:.{decimals}f} h'
+def _time_reason(best: RouteSummary, other: RouteSummary) -> str:
+    faster, slower = format_duration(best.duration_s), format_duration(other.duration_s)
+    if faster == slower:
+        return f'Equal risk; shorter travel time by {other.duration_s - best.duration_s:.0f} s'
+    return f'Equal risk; shorter travel time ({faster} vs {slower})'
 
 
 def _deciding_reason(best: RouteSummary, other: RouteSummary) -> str:
@@ -115,7 +118,7 @@ def _deciding_reason(best: RouteSummary, other: RouteSummary) -> str:
     if _risk(best.avg_risk) != _risk(other.avg_risk):
         return f'Same Severe and High miles; lower average risk ({best.avg_risk:.2f} vs {other.avg_risk:.2f})'
     if best.duration_s != other.duration_s:
-        return f'Equal risk; shorter travel time ({_hours_pair(best, other)})'
+        return _time_reason(best, other)
     return TIED_REASON
 
 

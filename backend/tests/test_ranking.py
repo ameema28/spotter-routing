@@ -93,7 +93,7 @@ TIE_BREAKS = [
         'Same Severe and High miles; lower average risk (0.42 vs 0.61)', id='avg_risk'),
     pytest.param(
         summary(0, severe=10, high=10, avg=0.5, hours=14.8), summary(1, severe=10, high=10, avg=0.5, hours=14.9),
-        'Equal risk; shorter travel time (14.8 h vs 14.9 h)', id='duration'),
+        'Equal risk; shorter travel time (14 h 48 min vs 14 h 54 min)', id='duration'),
 ]
 
 
@@ -185,9 +185,9 @@ def test_exact_tie_reason():
     assert recommend([first, second]) == (first, 'Tied on all criteria; first route returned')
 
 
-def test_close_durations_stay_readable_in_the_reason():
-    faster, slower = summary(0, hours=14.81), summary(1, hours=14.84)
-    assert recommend([faster, slower])[1] == 'Equal risk; shorter travel time (14.81 h vs 14.84 h)'
+def test_durations_within_a_minute_show_the_gap_in_the_reason():
+    faster, slower = summary(0, hours=14.8), summary(1, hours=14.8 + 12 / 3600)
+    assert recommend([faster, slower])[1] == 'Equal risk; shorter travel time by 12 s'
 
 
 @pytest.mark.parametrize('others', [

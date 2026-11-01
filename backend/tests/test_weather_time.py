@@ -6,11 +6,13 @@ from routing.domain.weather_time import eta_at_mile, precip_hour, time_profile, 
 
 METERS_PER_MILE = 1609.344
 DEPARTURE = datetime(2026, 11, 1, 8, 0, tzinfo=timezone.utc)
-HOURLY_TIMES = ['2026-11-01T13:00', '2026-11-01T14:00', '2026-11-01T15:00', '2026-11-01T16:00']
 
 
 def at(hour, minute=0):
     return datetime(2026, 11, 1, hour, minute, tzinfo=timezone.utc)
+
+
+HOURLY_TIMES = [at(13), at(14), at(15), at(16)]
 
 
 @pytest.fixture
@@ -80,7 +82,7 @@ def test_lookups_compare_instants_not_clock_faces(lookup):
 @pytest.mark.parametrize('lookup', [precip_hour, wind_hour])
 def test_lookups_find_rows_by_timestamp_not_position(lookup):
     # Open-Meteo starts at 00:00 GMT today, so row 0 is usually in the past.
-    assert lookup(at(14), ['2026-11-01T00:00', '2026-11-01T14:00']) == 1
+    assert lookup(at(14), [at(0), at(14)]) == 1
 
 
 @pytest.mark.parametrize('lookup', [precip_hour, wind_hour])
