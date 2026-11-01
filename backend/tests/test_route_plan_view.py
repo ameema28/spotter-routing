@@ -7,6 +7,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from routing import views
+from routing.throttles import RoutePlanDayThrottle, RoutePlanMinuteThrottle
 from routing.services.errors import (
     PlaceNotFound,
     ProviderBusy,
@@ -175,3 +176,46 @@ def test_large_responses_are_gzipped(client, plan):
                            HTTP_ACCEPT_ENCODING='gzip')
     assert response['Content-Encoding'] == 'gzip'
     assert json.loads(gzip.decompress(response.content))['routes'] == []
+
+
+def post_as(client, address):
+    return client.post(URL, valid(), format='json', HTTP_X_FORWARDED_FOR=address)
+
+
+def test_throttle_rates():
+    assert RoutePlanMinuteThrottle.rate == '10/minute'
+    assert RoutePlanDayThrottle.rate == '100/day'
+
+
+def test_eleventh_search_in_a_minute_is_refused(client, plan):
+    statuses = [post(client, valid()).status_code for _ in range(10)]
+    assert statuses == [200] * 10
+    response = post(client, valid())
+    assert response.status_code == 429
+    assert response.json() == {'error': 'Too many searches — please wait a minute and try again'}
+    assert int(response['Retry-After']) > 0
+    assert len(plan) == 10
+
+
+def test_clients_are_limited_separately(client, plan):
+    for _ in range(10):
+        post_as(client, '203.0.113.1')
+    assert post_as(client, '203.0.113.1').status_code == 429
+    assert post_as(client, '203.0.113.2').status_code == 200
+
+
+def test_a_forged_forwarded_address_does_not_dodge_the_limit(client, plan):
+    # The proxy appends the real address last, so only that one identifies the client.
+    for number in range(10):
+        post_as(client, f'198.51.100.{number}, 203.0.113.1')
+    assert post_as(client, '198.51.100.99, 203.0.113.1').status_code == 429
+
+
+def test_health_is_never_throttled(client):
+    assert {client.get('/api/health/').status_code for _ in range(15)} == {200}
+
+
+def test_invalid_searches_count_too(client, plan):
+    for _ in range(10):
+        post(client, valid(load_lb=-1))
+    assert post(client, valid()).status_code == 429

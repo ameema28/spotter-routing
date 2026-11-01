@@ -21,6 +21,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
 
 
+def env_list(name, default=''):
+    """A comma-separated environment variable. Blank falls back like missing."""
+    return [item.strip() for item in (os.getenv(name) or default).split(',') if item.strip()]
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -32,7 +37,12 @@ SECRET_KEY = os.getenv('SECRET_KEY') or 'django-insecure-local-dev-only'
 # Off unless explicitly enabled, so a missing .env fails safe.
 DEBUG = os.getenv('DEBUG', 'False').strip().lower() == 'true'
 
-ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host.strip()]
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS')
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
+
+# Hosting platforms end HTTPS at their proxy. Trusted only in production, where a proxy is
+# certain to be in front and sets this header itself.
+SECURE_PROXY_SSL_HEADER = None if DEBUG else ('HTTP_X_FORWARDED_PROTO', 'https')
 
 MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN', '')
 
@@ -53,6 +63,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.gzip.GZipMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     # Must run before CommonMiddleware so its responses also get CORS headers.
@@ -102,16 +113,25 @@ CACHES = {
         # On disk so restarts keep the cached weather and every worker shares it: each location
         # re-fetched counts against Open-Meteo's limit.
         'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-        'LOCATION': BASE_DIR / '.cache' / 'django',
+        # CACHE_DIR points at /tmp on hosts with a read-only filesystem.
+        'LOCATION': os.getenv('CACHE_DIR') or BASE_DIR / '.cache' / 'django',
         # The default of 300 would evict weather points during a single 10-mile comparison.
         'OPTIONS': {'MAX_ENTRIES': 2000},
     }
 }
 
 
-# CORS: the local React dev server (Vite's default port)
+# CORS: defaults to the local React dev server (Vite's default port)
 
-CORS_ALLOWED_ORIGINS = ['http://localhost:5173']
+CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', 'http://localhost:5173')
+
+
+# REST framework
+
+REST_FRAMEWORK = {
+    # One proxy in front, so the client is the last forwarded address. Earlier ones can be forged.
+    'NUM_PROXIES': 1,
+}
 
 
 # Password validation
@@ -149,6 +169,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

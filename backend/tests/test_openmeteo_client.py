@@ -353,6 +353,13 @@ def test_optional_cells_fully_cached_need_no_request(api):
     assert [call['count'] for call in api] == [1]
 
 
+def test_values_survive_the_file_cache(api, file_cache):
+    first = openmeteo.fetch_hourly([point(32)], 7)[0]
+    second = openmeteo.fetch_hourly([point(32)], 7)[0]
+    assert len(api) == 1
+    assert second == first
+
+
 def test_cached_values_survive_being_read_back(api):
     first = openmeteo.fetch_hourly([point(32)], 7)[0]
     second = openmeteo.fetch_hourly([point(32)], 7)[0]

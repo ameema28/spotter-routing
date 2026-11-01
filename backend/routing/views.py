@@ -1,3 +1,6 @@
+import math
+
+from rest_framework.exceptions import Throttled
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -10,6 +13,7 @@ from routing.services.errors import (
     RouteNotFound,
 )
 from routing.services.route_plan import build_route_plan
+from routing.throttles import RoutePlanDayThrottle, RoutePlanMinuteThrottle
 
 # Most specific first: every entry is a ProviderError.
 ERROR_STATUS = (
@@ -19,6 +23,7 @@ ERROR_STATUS = (
     (ProviderTimeout, 504),
     (ProviderError, 502),
 )
+THROTTLED_MESSAGE = 'Too many searches — please wait a minute and try again'
 
 
 def _error_response(error: ProviderError) -> Response:
@@ -39,6 +44,16 @@ class RoutePlanView(APIView):
     # A public read-only tool: no accounts, so no session or CSRF handling.
     authentication_classes = []
     permission_classes = []
+    throttle_classes = [RoutePlanMinuteThrottle, RoutePlanDayThrottle]
+
+    def handle_exception(self, exc):
+        # Same {'error': ...} shape as the other failures, so the frontend handles them one way.
+        if isinstance(exc, Throttled):
+            response = Response({'error': THROTTLED_MESSAGE}, status=429)
+            if exc.wait:
+                response['Retry-After'] = str(math.ceil(exc.wait))
+            return response
+        return super().handle_exception(exc)
 
     def post(self, request):
         serializer = RoutePlanRequestSerializer(data=request.data)
