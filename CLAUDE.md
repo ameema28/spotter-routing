@@ -33,6 +33,7 @@ Then STOP and wait for my choice. Minor decisions: pick a sensible default and r
 Max 5 score-affecting decisions per day.
 
 ## Current state
-- Day 1 done: Django skeleton and domain modules (risk, geo, weather_time, ranking) built and tested.
-- D1–D5 and the Day 2 carry-forward list are in DECISIONS.md.
-- Next: the Day 2 route comparison endpoint. Nothing connects the domain modules to the APIs yet.
+- Backend complete and live at https://spotter-routing-api.vercel.app.
+- API contract: the `build_route_plan` docstring in backend/routing/services/route_plan.py (the view points to it).
+- D1–D10 and the carry-forward list are in DECISIONS.md.
+- Next: the Day 3 React + MUI frontend in frontend/.
