@@ -15,5 +15,5 @@
 ## Carry forward
 - README limitations, D8 not modelled: rest-stop locations, team driving, 60/70-hour limits, sleeper-berth split, adverse-conditions extension, on-duty non-driving time.
 - Open-Meteo counted each location as one call in real runs (HTTP 200 up to 603 in a minute, 429 by 703), and limits are per IP: a fresh search uses about 250–320 of the 600 per minute and 10,000 per day. Plan any demo or Loom run around this.
-- Search time varies (5–26 s fresh in live runs): the frontend needs a clear loading state.
+- Search time varies (8.7–26.4 s with fresh weather, 2.9–7.8 s with weather cached, in live runs): the frontend needs a clear loading state.
 - Writing a fresh search to the file cache took about 2.3 s on Windows; re-measure on the host.
