@@ -8,7 +8,7 @@ from routing.services.errors import ProviderError
 
 GEOCODE_URL = 'https://api.mapbox.com/search/geocode/v6/forward'
 DIRECTIONS_URL = 'https://api.mapbox.com/directions/v5/mapbox/driving/{coords}'
-TIMEOUT_SECONDS = 10
+TIMEOUT_SECONDS = 15    # New queries took up to 9.9 s in real calls.
 
 
 @dataclass(frozen=True)

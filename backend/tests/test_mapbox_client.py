@@ -81,7 +81,7 @@ def test_geocode_is_us_only_and_uses_the_timeout(respond_with):
     mapbox.geocode('Dallas, TX')
     assert calls[0]['params']['q'] == 'Dallas, TX'
     assert calls[0]['params']['country'] == 'us'
-    assert calls[0]['timeout'] == 10
+    assert calls[0]['timeout'] == 15
 
 
 def test_geocode_is_not_cached(respond_with):
@@ -121,7 +121,7 @@ def test_directions_sends_the_parameters_proven_in_the_spike(respond_with):
         'alternatives': 'true', 'geometries': 'geojson', 'overview': 'full',
         'annotations': 'distance,duration', 'access_token': FAKE_TOKEN,
     }
-    assert calls[0]['timeout'] == 10
+    assert calls[0]['timeout'] == 15
 
 
 def test_directions_puts_via_between_origin_and_destination(respond_with):
