@@ -30,7 +30,7 @@ Check it at http://127.0.0.1:8000/api/health/, which returns `{"status":"ok"}`.
 
 ## Deploy
 
-The backend runs on Vercel Hobby as one Python function (Python 3.12, pinned in `backend/.python-version`).
+The backend is live at https://spotter-routing-api.vercel.app. It runs on Vercel Hobby as one Python function (Python 3.12, pinned in `backend/.python-version`).
 
 1. Import the GitHub repo into Vercel and set **Root Directory** to `backend`. Vercel detects Django from `manage.py` and runs `collectstatic` itself.
 2. Set these environment variables:

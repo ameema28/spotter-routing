@@ -3,14 +3,14 @@
 Day 1 | 2.5h (1.5h build + ~1h planning and setup) | Running total 2.5h / 16h | Status: Day 1 plan complete
 
 ## Current state
+Live backend: https://spotter-routing-api.vercel.app (health at `/api/health/`)
+
 Exists:
-- Django + DRF skeleton with `GET /api/health/`
-- Domain modules in `backend/routing/domain/`: `risk.py`, `geo.py`, `weather_time.py`, `ranking.py`
-- API spike scripts and Mapbox + Open-Meteo fixtures
-- 164 passing tests
+- `GET /api/health/` and `POST /api/route-plan/`, deployed on Vercel Hobby
+- Domain modules in `backend/routing/domain/`: risk, load rules, sampling, ETA, truck ETA, ranking, third route, heatmap grid
+- Mapbox and Open-Meteo clients with caching and throttling
+- 430 passing tests, on Python 3.11 and 3.12
 
 Doesn't exist yet:
-- Route comparison endpoint
-- Third route
 - Frontend
-- Hosting
+- Frontend hosting
