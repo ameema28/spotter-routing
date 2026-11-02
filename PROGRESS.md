@@ -2,7 +2,7 @@
 
 Day 1 | 2.5h (1.5h build + ~1h planning and setup) | Running total 2.5h / 16h | Status: Day 1 plan complete
 Day 2 | 3.25h | Running total 5.75h / 16h | Status: Backend complete and live (https://spotter-routing-api.vercel.app)
-Day 3 | ___h | Running total ___ / 16h | Status: Frontend complete and live (https://spotter-routing-ameema.vercel.app)
+Day 3 | 2.75h | Running total 8.5h / 16h | Status: Frontend complete and live (https://spotter-routing-ameema.vercel.app)
 
 ## Current state
 Live app: https://spotter-routing-ameema.vercel.app
