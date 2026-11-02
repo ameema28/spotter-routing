@@ -11,6 +11,7 @@ from routing.domain.geometry import (
     GRID_STEPS,
     _keep_distance,
     corridor_grid,
+    corridor_grid_with_step,
     simplify_line,
 )
 
@@ -174,3 +175,24 @@ def test_grid_has_no_duplicates():
 
 def test_no_routes_gives_an_empty_grid():
     assert corridor_grid([], 25, 250) == []
+
+
+def test_grid_with_step_reports_the_step_its_points_sit_on():
+    routes = [east_west_route(300)]
+    step, grid = corridor_grid_with_step(routes, 25, 250)
+    assert step in GRID_STEPS
+    assert grid == corridor_grid(routes, 25, 250)
+    lat_step, lon_step = step
+    for point in grid:
+        assert point['lat'] / lat_step == pytest.approx(round(point['lat'] / lat_step))
+        assert point['lon'] / lon_step == pytest.approx(round(point['lon'] / lon_step))
+
+
+def test_long_trip_reports_a_coarser_step():
+    short_step, _ = corridor_grid_with_step([east_west_route(200)], 25, 250)
+    long_step, _ = corridor_grid_with_step([east_west_route(2500)], 25, 250)
+    assert long_step[0] > short_step[0]
+
+
+def test_no_routes_has_no_step():
+    assert corridor_grid_with_step([], 25, 250) == (None, [])

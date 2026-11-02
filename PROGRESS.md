@@ -2,6 +2,7 @@
 
 Day 1 | 2.5h (1.5h build + ~1h planning and setup) | Running total 2.5h / 16h | Status: Day 1 plan complete
 Day 2 | 3.25h | Running total 5.75h / 16h | Status: Backend complete and live (https://spotter-routing-api.vercel.app)
+Day 3.1 | 0.75h | Running total 6.5h / 16h | Status: Frontend scaffold, map and server wake-up; heatmap `step_deg` added to the API
 
 ## Current state
 Live backend: https://spotter-routing-api.vercel.app
@@ -14,7 +15,7 @@ Exists:
 - 430 passing tests, on Python 3.11 and 3.12
 
 Doesn't exist yet:
-- Frontend
+- Frontend form, results, routes on the map, heatmap and slider (scaffold, basemap and wake-up chip exist)
 - Frontend hosting
 - Final README
 - Loom

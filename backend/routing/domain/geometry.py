@@ -84,15 +84,22 @@ def _grid_at_step(samples: list[tuple[float, float]], step: tuple[float, float],
     return grid
 
 
-def corridor_grid(routes: list, buffer_mi: float, max_points: int) -> list[dict]:
-    """The finest fixed grid around the routes that stays within max_points, as {lat, lon}."""
+def corridor_grid_with_step(routes: list, buffer_mi: float, max_points: int
+                            ) -> tuple[tuple[float, float] | None, list[dict]]:
+    """The finest fixed grid around the routes that stays within max_points: its (lat, lon) step and
+    its points as {lat, lon}. The step is sent so the map can draw each point as a cell of that size."""
     samples = _route_samples(routes)
     if not samples:
-        return []
+        return None, []
     lowest_lat = min(lat for lat, _ in samples)
     grid = {}
     for step in GRID_STEPS:
         grid = _grid_at_step(samples, step, _keep_distance(step, buffer_mi, lowest_lat))
         if len(grid) <= max_points:
             break
-    return [grid[key] for key in sorted(grid)][:max_points]
+    return step, [grid[key] for key in sorted(grid)][:max_points]
+
+
+def corridor_grid(routes: list, buffer_mi: float, max_points: int) -> list[dict]:
+    """The grid points of corridor_grid_with_step, without the step."""
+    return corridor_grid_with_step(routes, buffer_mi, max_points)[1]

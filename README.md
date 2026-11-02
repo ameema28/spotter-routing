@@ -28,6 +28,21 @@ python manage.py runserver
 
 Check it at http://127.0.0.1:8000/api/health/, which returns `{"status":"ok"}`.
 
+## Frontend: run locally
+
+Requires Node 20.19+ or 22.12+ (Vite 8; built with Node 24). From the repo root:
+
+```powershell
+cd frontend
+npm install
+Copy-Item .env.example .env
+npm run dev
+```
+
+Open http://localhost:5173. `.env` points at the live API (`VITE_API_URL=https://spotter-routing-api.vercel.app`); for a local backend set it to `http://127.0.0.1:8000`. Other scripts: `npm run test`, `npm run lint`, `npm run build`.
+
+The basemap is OpenFreeMap's Positron style and needs no key.
+
 ## Deploy
 
 The backend is live at https://spotter-routing-api.vercel.app. It runs on Vercel Hobby as one Python function (Python 3.12, pinned in `backend/.python-version`).

@@ -13,6 +13,10 @@
 - D10 (Day 2): Host the backend on Vercel Hobby (300 s limit, no fixed sleep) with Render as the documented fallback; no uptime pinging; cache lives in `/tmp` via `CACHE_DIR`, so it is temporary and per instance.
 - Minor defaults (Day 1): step 10/25/50 default 25; US-only geocoding; UTC; float rounding inside `risk.py`; precip uses the hour ending at or after the ETA, wind uses the nearest hour; no DB; no geocode caching.
 - Minor defaults (Day 2): `forecast_days` fixed at 11, which costs no extra because Open-Meteo only adds weight above 10 variables or 2 weeks (https://open-meteo.com/en/pricing); Open-Meteo 429 returns HTTP 503 with no retry; candidate deadline 12 s after the main call; search throttled per client at 10/minute and 100/day, health unthrottled.
+- D11 (Day 3): MapLibre GL via react-map-gl/maplibre with OpenFreeMap Positron (no key, no stated request limit, credit comes from the tile source; as-is, no SLA, per https://openfreemap.org/ and https://openfreemap.org/tos/); Leaflet + OSM tiles rejected because access "may be blocked without prior notice" (https://operations.osmfoundation.org/policies/tiles/), Mapbox because its default token can't be restricted.
+- D12 (Day 3): Heatmap as discrete grid squares in the checkpoint colours, Unknown grey; built once per search, and the slider only changes the colour rule for hour X; the API sends `heatmap.step_deg` [lat, lon] so cell size isn't guessed; smoothness measured per slider update (target < 16 ms) plus a Chrome Performance recording.
+- D13 (Day 3): TypeScript kept plain (API types and props only) + Vitest for pure helpers.
+- Minor defaults (Day 3): Vite 8 react-ts template (TypeScript 7, oxlint as `lint`); MUI 9.5; plain React state; fetch + AbortController; risk colours Low green, Moderate yellow, High orange, Severe red, No Travel purple, Unknown grey, always with a text label; `VITE_API_URL` in `frontend/.env`; "Starting the server…" hint after 2 s without a health answer.
 
 ## Carry forward
 - When the frontend is deployed: add its domain to `CORS_ALLOWED_ORIGINS` (and `CSRF_TRUSTED_ORIGINS` if needed).

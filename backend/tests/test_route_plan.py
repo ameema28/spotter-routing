@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from routing.domain.alternatives import Candidate
+from routing.domain.geometry import GRID_STEPS
 from routing.services import route_plan
 from routing.services.errors import ProviderBusy
 from routing.services.mapbox import Route
@@ -134,6 +135,7 @@ def test_heatmap_shape(providers):
     assert 0 < len(heatmap['points']) <= 250
     assert len(heatmap['levels']) == len(heatmap['points'])
     assert all(len(row) == 49 for row in heatmap['levels'])
+    assert tuple(heatmap['step_deg']) in GRID_STEPS
 
 
 def test_failed_heatmap_keeps_the_answer_and_adds_a_note(providers):

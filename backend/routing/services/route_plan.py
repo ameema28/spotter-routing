@@ -7,7 +7,7 @@ from typing import Any
 from routing.domain.alternatives import route_count_note, select_extra_routes
 from routing.domain.formatting import format_duration
 from routing.domain.geo import METERS_PER_MILE
-from routing.domain.geometry import DISPLAY_TOLERANCE_DEGREES, corridor_grid, simplify_line
+from routing.domain.geometry import DISPLAY_TOLERANCE_DEGREES, corridor_grid_with_step, simplify_line
 from routing.domain.ranking import rank_routes, recommend
 from routing.domain.route_assessment import RouteAssessment, assess_route, heatmap_levels, plan_checkpoints
 from routing.services import mapbox
@@ -114,14 +114,15 @@ def _route_json(index: int, route: Any, label: str, source: str, assessment: Rou
     }
 
 
-def _heatmap_json(grid: list[dict], forecasts: list[Any] | None, departure: datetime,
-                  load_lb: float) -> dict | None:
+def _heatmap_json(step: tuple[float, float] | None, grid: list[dict], forecasts: list[Any] | None,
+                  departure: datetime, load_lb: float) -> dict | None:
     if forecasts is None:
         return None
     hours, levels = heatmap_levels(forecasts, departure, load_lb)
     return {
         'start': departure.isoformat(),
         'hours': [hour.isoformat() for hour in hours],
+        'step_deg': list(step),
         'points': [[point['lat'], point['lon']] for point in grid],
         'levels': levels,
     }
@@ -145,7 +146,8 @@ def build_route_plan(origin: str, destination: str, departure: datetime, load_lb
     Response: origin and destination {label, lat, lon}; routes[] {id, label, source, geometry
     [[lat, lon]], distance_mi, drive_seconds, drive_time, trip_seconds, trip_time, breaks[], summary,
     checkpoints[]}; ranking (route ids, best first); recommendation {route_id or null, reason};
-    heatmap {start, hours (49), points [[lat, lon]], levels (per point, 49 of 0-4 or null)} or null;
+    heatmap {start, hours (49), step_deg [lat, lon] (grid spacing, each point is the centre of a cell this
+    size), points [[lat, lon]], levels (per point, 49 of 0-4 or null)} or null;
     notes[]; timings_ms {geocode, routing, weather, compute}.
     """
     started = time.perf_counter()
@@ -158,7 +160,8 @@ def build_route_plan(origin: str, destination: str, departure: datetime, load_lb
 
     started = time.perf_counter()
     plans = [plan_checkpoints(route, step_miles) for route, _, _ in labelled]
-    grid = corridor_grid([route for route, _, _ in labelled], HEATMAP_BUFFER_MILES, HEATMAP_MAX_POINTS)
+    step, grid = corridor_grid_with_step([route for route, _, _ in labelled], HEATMAP_BUFFER_MILES,
+                                         HEATMAP_MAX_POINTS)
     compute_ms = _elapsed_ms(started)
 
     started = time.perf_counter()
@@ -170,7 +173,7 @@ def build_route_plan(origin: str, destination: str, departure: datetime, load_lb
     assessments = _assess_all(labelled, plans, forecasts, departure, load_lb)
     ranked = rank_routes([assessment.summary for assessment in assessments])
     best, reason = recommend(ranked)
-    heatmap = _heatmap_json(grid, grid_forecasts, departure, load_lb)
+    heatmap = _heatmap_json(step, grid, grid_forecasts, departure, load_lb)
     if heatmap is None:
         notes.append(HEATMAP_UNAVAILABLE_NOTE)
     routes = [_route_json(index, route, label, source, assessments[index], departure)
