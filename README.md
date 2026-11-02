@@ -1,5 +1,10 @@
 # spotter-routing
 
+Recommends the safest of up to 3 truck routes, using the weather along each route, the load weight and travel time.
+
+- **Live app:** https://spotter-routing-ameema.vercel.app
+- **API:** https://spotter-routing-api.vercel.app (health check: `/api/health/`)
+
 ## Backend: run locally
 
 Requires Python 3.11 or 3.12. Run from the repo root (PowerShell shown):
@@ -61,5 +66,7 @@ The backend is live at https://spotter-routing-api.vercel.app. It runs on Vercel
 | `CACHE_DIR` | `/tmp/spotter-cache`, because the rest of the filesystem is read-only |
 
 Cached weather on Vercel is temporary and local to an instance. Searches still work without it, at the cost of a fresh weather fetch.
+
+**Frontend:** a second Vercel project from the same repo, with **Root Directory** `frontend` and the Vite preset (build `npm run build`, output `dist`). Set `VITE_API_URL=https://spotter-routing-api.vercel.app`; it's read at build time, so redeploy after changing it. Live at https://spotter-routing-ameema.vercel.app. The backend's `CORS_ALLOWED_ORIGINS` must list this origin, e.g. `http://localhost:5173,https://spotter-routing-ameema.vercel.app`, followed by a backend redeploy.
 
 **Fallback host:** `render.yaml` deploys the same code to Render's free tier with gunicorn. Render's free service sleeps after 15 idle minutes and takes about a minute to wake. Leave `CACHE_DIR` unset there.

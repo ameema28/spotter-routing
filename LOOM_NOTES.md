@@ -14,4 +14,11 @@
 - **One endpoint:** show one response. It returns routes, checkpoints, ranking, reason and a 48-hour heatmap in ~11 KB gzipped, with simplified geometry for the browser.
 - **Deployment:** show the live checks. Deployed free on Vercel (no fixed sleep, 300 s limit) rather than Render (1-min wake-up); live: fresh 3.3 s, repeat 2.1 s, cold start 7.7 s; throttling protects provider quotas.
 
+## Day 3
+- **WebGL map:** show the map and a route click. Routes, checkpoints and heatmap are MapLibre GPU layers built once per search; picking a route only changes layer filters and colours, never the data. Free OpenFreeMap basemap, so no API key in the browser.
+- **Heatmap + slider:** open `?perf=1` and drag. The heatmap squares store all 49 hours, so the slider only changes which hour the colour reads. On the live production site a move takes about 2.6 ms of React work and is drawn in the next frame (15.6 ms median, p95 30 ms) on an Intel Iris Xe laptop GPU.
+- **Legal breaks:** drag across T+8 h and T+11.5–21.5 h. The truck stands still at the 30-min break and the 10-h rest, because its position follows checkpoint ETAs plus each stop's start and end.
+- **Accuracy check:** show `accuracy.test.ts`. Heatmap cells agree with the checkpoints they cover 95.9% of the time (117/122); the 5 differences are one level apart, from the cell centre being 8–14 miles from the checkpoint and wind sitting near the Moderate edge.
+- **UX details:** server wake-up chip, errors under the right field, matched place names (a fuzzy geocode shows), far-departure note beyond 48 h, aligned cards; screenshots checked headless at four slider hours on desktop and phone before each hand-off.
+
 AI use: planned with Claude, built with Claude Code block by block; I chose every decision and reviewed the tests.

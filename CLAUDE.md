@@ -16,6 +16,8 @@ using weather, load weight and travel time.
 - Never invent third-party API facts: prove them with a real call, or tell me what to check in the docs.
 - Secrets only in .env (gitignored); commit .env.example with empty values. Never print tokens.
 - Comments explain why, not what.
+- After each UI change: headless Chrome (fixture-backed, no live search) screenshots at T+0/8/15/40 on desktop and
+  phone; review them for overlaps, cut-off pins, misaligned cards and console errors before asking me to check.
 
 ## Logs
 - DECISIONS.md: one line per decision.
@@ -33,7 +35,8 @@ Then STOP and wait for my choice. Minor decisions: pick a sensible default and r
 Max 5 score-affecting decisions per day.
 
 ## Current state
-- Backend complete and live at https://spotter-routing-api.vercel.app.
-- API contract: the `build_route_plan` docstring in backend/routing/services/route_plan.py (the view points to it).
-- D1–D10 and the carry-forward list are in DECISIONS.md.
-- Next: the Day 3 React + MUI frontend in frontend/.
+- Live: app https://spotter-routing-ameema.vercel.app, API https://spotter-routing-api.vercel.app (API contract: `build_route_plan` docstring).
+- Backend 441 tests, frontend 75 tests; D1–D13, minor defaults and the carry-forward list are in DECISIONS.md.
+- Open-Meteo 429s are logged server-side with the provider's reason (Vercel function logs).
+- Next: Day 4 QA pass (PDF requirements, errors, mobile, Lighthouse), final README, Loom, submission.
+- Day 4 carry-forward also has a heatmap retry endpoint and fewer weather locations per search.

@@ -2,20 +2,18 @@
 
 Day 1 | 2.5h (1.5h build + ~1h planning and setup) | Running total 2.5h / 16h | Status: Day 1 plan complete
 Day 2 | 3.25h | Running total 5.75h / 16h | Status: Backend complete and live (https://spotter-routing-api.vercel.app)
-Day 3.1 | 0.75h | Running total 6.5h / 16h | Status: Frontend scaffold, map and server wake-up; heatmap `step_deg` added to the API
+Day 3 | ___h | Running total ___ / 16h | Status: Frontend complete and live (https://spotter-routing-ameema.vercel.app)
 
 ## Current state
-Live backend: https://spotter-routing-api.vercel.app
+Live app: https://spotter-routing-ameema.vercel.app
+Live API: https://spotter-routing-api.vercel.app
 
 Exists:
-- `GET /api/health/` and `POST /api/route-plan/`, deployed on Vercel Hobby
-- Domain modules in `backend/routing/domain/`: risk and load rules, sampling, ETA, truck ETA, ranking, third route, hubs, heatmap grid, route assessment
-- Services in `backend/routing/services/`: Mapbox and Open-Meteo clients, candidates, route plan
-- Caching and throttling
-- 430 passing tests, on Python 3.11 and 3.12
+- Backend: `GET /api/health/` and `POST /api/route-plan/` on Vercel Hobby; domain modules in `backend/routing/domain/`, services in `backend/routing/services/`; caching, throttling, server-side logging of Open-Meteo 429 reasons; 441 passing tests
+- Frontend (`frontend/`, React + TypeScript + MUI + MapLibre) on Vercel: search form with field errors, loading stages, ranked route cards, map with routes, checkpoints, stops, popups and legend, corridor heatmap with a 0–48 h slider and moving trucks; 75 passing tests
 
 Doesn't exist yet:
-- Frontend form, results, routes on the map, heatmap and slider (scaffold, basemap and wake-up chip exist)
-- Frontend hosting
-- Final README
+- Day 4 QA pass (requirements vs the PDF, error cases, mobile width, Lighthouse)
+- Final README (limitations)
 - Loom
+- Submission
