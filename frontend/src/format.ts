@@ -17,6 +17,11 @@ export function routeTitle(label: string): string {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
+// Geocoding is US-only, so the country adds nothing: "Dallas, Texas, United States" → "Dallas, Texas".
+export function placeName(label: string): string {
+  return label.replace(/, United States$/, '')
+}
+
 // timeZone is only passed by tests; the app always shows the browser's own zone.
 export function formatLocalDateTime(iso: string, timeZone?: string): string {
   return new Intl.DateTimeFormat('en-US', {

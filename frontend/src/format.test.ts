@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDuration, formatLocalDateTime, formatMiles, routeTitle } from './format'
+import { formatDuration, formatLocalDateTime, formatMiles, placeName, routeTitle } from './format'
 
 describe('formatMiles', () => {
   it('adds thousands separators and one decimal', () => {
@@ -30,6 +30,14 @@ describe('routeTitle', () => {
   it('capitalises a generated route label and leaves the rest alone', () => {
     expect(routeTitle('generated alternative (via Kansas City)')).toBe('Generated alternative (via Kansas City)')
     expect(routeTitle('Fastest route')).toBe('Fastest route')
+  })
+})
+
+describe('placeName', () => {
+  it('drops the country, since every place is in the US', () => {
+    expect(placeName('Dallas, Texas, United States')).toBe('Dallas, Texas')
+    expect(placeName('E Zzzz Ave, Dayton, Ohio 45402, United States')).toBe('E Zzzz Ave, Dayton, Ohio 45402')
+    expect(placeName('Somewhere')).toBe('Somewhere')
   })
 })
 

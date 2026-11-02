@@ -2,6 +2,7 @@ import Alert from '@mui/material/Alert'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import type { RoutePlan } from '../api/types'
+import { placeName } from '../format'
 import RecommendationBanner from './RecommendationBanner'
 import RouteCard from './RouteCard'
 
@@ -19,6 +20,10 @@ export default function ResultsPanel({ plan, selectedRouteId, onSelectRoute }: P
 
   return (
     <Stack spacing={2}>
+      {/* The places the geocoder matched, so a wrong match ("Nowhereville" → Dayton) is obvious. */}
+      <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
+        {placeName(plan.origin.label)} → {placeName(plan.destination.label)}
+      </Typography>
       <RecommendationBanner plan={plan} />
       {plan.notes.map((note) => <Alert key={note} severity="info">{note}</Alert>)}
       {routesInRankOrder.map((route) => (

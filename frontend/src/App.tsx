@@ -41,7 +41,7 @@ export default function App() {
         <SidePanel server={server} search={search} selectedRouteId={selectedRouteId} onSelectRoute={selectRoute} />
       </Box>
       <Box component="main" sx={{ flex: 1, height: { xs: '70vh', md: 'auto' } }}>
-        <MapView />
+        <MapView plan={plan} selectedRouteId={selectedRouteId} onSelectRoute={selectRoute} />
       </Box>
     </Box>
   )

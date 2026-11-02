@@ -18,6 +18,7 @@
 - D13 (Day 3): TypeScript kept plain (API types and props only) + Vitest for pure helpers.
 - Minor defaults (Day 3): Vite 8 react-ts template (TypeScript 7, oxlint as `lint`); MUI 9.5; plain React state; fetch + AbortController; risk colours Low green, Moderate yellow, High orange, Severe red, No Travel purple, Unknown grey, always with a text label; `VITE_API_URL` in `frontend/.env`; "Starting the server…" hint after 2 s without a health answer.
 - Minor defaults (Day 3.2): native `datetime-local` departure, default next full hour, sent with its UTC offset; `summary.miles_by_level` added to the API so the risk bar uses backend miles; a 422 place-not-found carries `field`; loading stages by elapsed time (2 s / 6 s), labelled as typical; selection defaults to the recommended route, else first ranked; card chip shows Mapbox or Generated, with the via/tolls detail in the title.
+- Minor defaults (Day 3.3): routes, checkpoints and the click target are GeoJSON layers built once per plan, and selection only changes filters and paint values; break position = walk the display line to the break's mile, scaled to `distance_mi`; breaks and start/end are React markers (about 4); clicking a faded checkpoint opens its popup without changing the selection; fit padding 56 px because the panel sits beside the map; the legend starts folded on narrow screens.
 
 ## Carry forward
 - When the frontend is deployed: add its domain to `CORS_ALLOWED_ORIGINS` (and `CSRF_TRUSTED_ORIGINS` if needed).
@@ -27,4 +28,4 @@
 - README limitations: HOS not modelled (60/70-hour limits, sleeper-berth split, adverse conditions, team driving, rest-stop locations, on-duty non-driving time); car-based routing; Open-Meteo shared-IP limits; per-instance cache and throttling.
 - Open-Meteo counted each location as one call in real runs (HTTP 200 up to 603 in a minute, 429 by 703), and limits are per IP: a fresh search uses about 250–320 of the 600 per minute and 10,000 per day. Plan any demo or Loom run around this.
 - Live on Vercel: cold start 7.7 s after 20 idle minutes, then search 3.3–3.5 s fresh and 2.1 s repeat, from one session; earlier local runs reached 26 s, so the frontend still needs a loading state and the health wake-up.
-- Mapbox geocoding is fuzzy: "Nowhereville Zzzq" matched "E Zzzz Ave, Dayton, Ohio" live, so a typo can quietly become a wrong place. The results should show the resolved origin/destination labels (Prompt 3 or 5).
+- Mapbox geocoding is fuzzy: "Nowhereville Zzzq" matched "E Zzzz Ave, Dayton, Ohio" live, so a typo can quietly become a wrong place. Done in 3.3: the results heading and the map pins show the matched labels.
