@@ -9,11 +9,13 @@ import pytest
 from routing.domain.alternatives import Candidate
 from routing.domain.geometry import GRID_STEPS
 from routing.services import route_plan
-from routing.services.errors import ProviderBusy
+from routing.services.errors import PlaceNotFound, ProviderBusy
 from routing.services.mapbox import Route
 from routing.services.openmeteo import _parse_location
 
 FIXTURES = Path(__file__).parent / 'fixtures'
+# Six level totals, each rounded to 0.1 mi, can drift from the route distance by up to 0.3 mi.
+MILES_TOLERANCE = 0.3
 DEPARTURE = datetime(2026, 11, 1, 8, 0, tzinfo=timezone.utc)
 DALLAS = {'lat': 32.7813, 'lon': -96.7998, 'label': 'Dallas, Texas, United States'}
 CHICAGO = {'lat': 41.8820, 'lon': -87.6324, 'label': 'Chicago, Illinois, United States'}
@@ -111,7 +113,29 @@ def test_display_geometry_is_simplified_lat_lon(providers):
 def test_summary_fields(providers):
     summary = build()['routes'][0]['summary']
     assert set(summary) == {'severe_miles', 'high_miles', 'no_travel_miles', 'unknown_miles',
-                            'avg_risk', 'tier', 'flags'}
+                            'avg_risk', 'tier', 'flags', 'miles_by_level'}
+
+
+def test_miles_by_level_sums_to_the_route_distance(providers):
+    for route in build()['routes']:
+        by_level = route['summary']['miles_by_level']
+        assert list(by_level) == ['low', 'moderate', 'high', 'severe', 'no_travel', 'unknown']
+        assert by_level['severe'] == route['summary']['severe_miles']
+        assert by_level['unknown'] == route['summary']['unknown_miles']
+        assert sum(by_level.values()) == pytest.approx(route['distance_mi'], abs=MILES_TOLERANCE)
+
+
+@pytest.mark.parametrize('missing, field', [('Dallas', 'origin'), ('Chicago', 'destination')])
+def test_place_not_found_says_which_place(providers, monkeypatch, missing, field):
+    def fake_geocode(query):
+        if missing in query:
+            raise PlaceNotFound('No US location found for that place')
+        return DALLAS if 'Dallas' in query else CHICAGO
+
+    monkeypatch.setattr(route_plan.mapbox, 'geocode', fake_geocode)
+    with pytest.raises(PlaceNotFound) as caught:
+        build()
+    assert caught.value.field == field
 
 
 def test_checkpoint_fields_are_json_ready(providers):

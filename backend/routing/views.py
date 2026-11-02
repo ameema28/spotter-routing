@@ -28,7 +28,11 @@ THROTTLED_MESSAGE = 'Too many searches — please wait a minute and try again'
 
 def _error_response(error: ProviderError) -> Response:
     status = next(code for kind, code in ERROR_STATUS if isinstance(error, kind))
-    response = Response({'error': str(error)}, status=status)
+    body = {'error': str(error)}
+    # Lets the form show "not found" under the right input.
+    if getattr(error, 'field', None):
+        body['field'] = error.field
+    response = Response(body, status=status)
     if getattr(error, 'retry_after', None):
         response['Retry-After'] = error.retry_after
     return response

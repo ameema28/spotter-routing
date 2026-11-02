@@ -1,5 +1,5 @@
 """Route summary, ranking and recommendation from the PDF's "Prefer" list and decision D5."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from routing.domain.formatting import format_duration
 from routing.domain.risk import RiskLevel
@@ -35,6 +35,8 @@ class RouteSummary:
     has_no_travel: bool
     insufficient_data: bool
     tier: int
+    # Every level, so the browser can draw the whole route's mix (Low and Moderate are not ranked on).
+    miles_by_level: dict[RiskLevel | None, float] = field(default_factory=dict)
 
 
 def _miles(value: float) -> float:
@@ -80,6 +82,7 @@ def summarize_route(route_index: int, levels: list[RiskLevel | None], weights: l
         route_index, total_miles, duration_s, miles_at(RiskLevel.SEVERE), miles_at(RiskLevel.HIGH),
         miles_at(RiskLevel.NO_TRAVEL), unknown_miles, avg_risk, has_no_travel, insufficient_data,
         _tier(has_no_travel, insufficient_data),
+        {level: miles_at(level) for level in [*RiskLevel, None]},
     )
 
 

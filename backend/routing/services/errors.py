@@ -7,7 +7,11 @@ class ProviderTimeout(ProviderError):
 
 
 class PlaceNotFound(ProviderError):
-    """Geocoding found no match for what the user typed."""
+    """Geocoding found no match for what the user typed. field says which input: origin or destination."""
+
+    def __init__(self, message: str, field: str | None = None):
+        super().__init__(message)
+        self.field = field
 
 
 class RouteNotFound(ProviderError):

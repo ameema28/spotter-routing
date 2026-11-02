@@ -9,9 +9,11 @@ from routing.domain.formatting import format_duration
 from routing.domain.geo import METERS_PER_MILE
 from routing.domain.geometry import DISPLAY_TOLERANCE_DEGREES, corridor_grid_with_step, simplify_line
 from routing.domain.ranking import rank_routes, recommend
+from routing.domain.risk import RiskLevel
 from routing.domain.route_assessment import RouteAssessment, assess_route, heatmap_levels, plan_checkpoints
 from routing.services import mapbox
 from routing.services.candidates import generate_candidates
+from routing.services.errors import PlaceNotFound
 from routing.services.openmeteo import fetch_many
 
 # D9: every location counts against Open-Meteo's 600 per minute, so the grid is what limits fresh
@@ -24,6 +26,9 @@ HEATMAP_MAX_POINTS = 250
 # 2 weeks or 10 variables (https://open-meteo.com/en/pricing).
 FORECAST_DAYS = 11
 
+LEVEL_NAMES = (('low', RiskLevel.LOW), ('moderate', RiskLevel.MODERATE), ('high', RiskLevel.HIGH),
+               ('severe', RiskLevel.SEVERE), ('no_travel', RiskLevel.NO_TRAVEL), ('unknown', None))
+
 HEATMAP_UNAVAILABLE_NOTE = 'Heatmap unavailable: weather service is busy'
 
 
@@ -31,9 +36,17 @@ def _elapsed_ms(started: float) -> int:
     return round((time.perf_counter() - started) * 1000)
 
 
+def _geocode(query: str, field: str) -> dict:
+    try:
+        return mapbox.geocode(query)
+    except PlaceNotFound as error:
+        raise PlaceNotFound(str(error), field=field) from None
+
+
 def _geocode_both(origin: str, destination: str) -> tuple[dict, dict]:
     with ThreadPoolExecutor(max_workers=2) as pool:
-        first, second = pool.submit(mapbox.geocode, origin), pool.submit(mapbox.geocode, destination)
+        first = pool.submit(_geocode, origin, 'origin')
+        second = pool.submit(_geocode, destination, 'destination')
         return first.result(), second.result()
 
 
@@ -85,6 +98,7 @@ def _summary_json(summary: Any) -> dict:
         'avg_risk': summary.avg_risk,
         'tier': summary.tier,
         'flags': flags,
+        'miles_by_level': {name: round(summary.miles_by_level[level], 1) for name, level in LEVEL_NAMES},
     }
 
 
@@ -144,11 +158,14 @@ def build_route_plan(origin: str, destination: str, departure: datetime, load_lb
     """Geocode, find routes, fetch weather once, assess and rank. Returns the API response.
 
     Response: origin and destination {label, lat, lon}; routes[] {id, label, source, geometry
-    [[lat, lon]], distance_mi, drive_seconds, drive_time, trip_seconds, trip_time, breaks[], summary,
-    checkpoints[]}; ranking (route ids, best first); recommendation {route_id or null, reason};
+    [[lat, lon]], distance_mi, drive_seconds, drive_time, trip_seconds, trip_time, breaks[], summary
+    {severe_miles, high_miles, no_travel_miles, unknown_miles, avg_risk, tier, flags, miles_by_level
+    {low, moderate, high, severe, no_travel, unknown}}, checkpoints[]}; ranking (route ids, best first);
+    recommendation {route_id or null, reason};
     heatmap {start, hours (49), step_deg [lat, lon] (grid spacing, each point is the centre of a cell this
     size), points [[lat, lon]], levels (per point, 49 of 0-4 or null)} or null;
     notes[]; timings_ms {geocode, routing, weather, compute}.
+    Errors are {error}; a place that isn't found also has field: origin or destination (HTTP 422).
     """
     started = time.perf_counter()
     start, end = _geocode_both(origin, destination)

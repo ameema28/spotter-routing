@@ -35,6 +35,17 @@ def test_summarize_splits_miles_by_level():
     assert (route.no_travel_miles, route.unknown_miles) == (5, 15)
 
 
+def test_miles_by_level_covers_every_level_and_sums_to_the_route():
+    route = summarize_route(0, [L, M, M, H, S, NT, None], [10, 4, 6, 20, 30, 5, 15], 3600)
+    assert route.miles_by_level == {L: 10, M: 10, H: 20, S: 30, NT: 5, None: 15}
+    assert sum(route.miles_by_level.values()) == route.total_miles
+
+
+def test_miles_by_level_lists_levels_with_no_miles_as_zero():
+    route = summarize_route(0, [L, L], [5, 5], 3600)
+    assert route.miles_by_level == {L: 10, M: 0, H: 0, S: 0, NT: 0, None: 0}
+
+
 def test_avg_risk_is_distance_weighted_over_known_checkpoints_only():
     route = summarize_route(0, [L, H, S, NT, None], [10, 20, 30, 5, 15], 3600)
     assert route.avg_risk == 2.31   # (0*10 + 2*20 + 3*30 + 4*5) / 65; the 15 unknown miles are out

@@ -150,6 +150,13 @@ def test_errors_map_to_status_codes(client, monkeypatch, error, status):
     assert response.json() == {'error': str(error)}
 
 
+def test_place_not_found_names_the_field(client, monkeypatch):
+    failing(monkeypatch, PlaceNotFound('No US location found for that place', field='destination'))
+    response = post(client, valid())
+    assert response.status_code == 422
+    assert response.json() == {'error': 'No US location found for that place', 'field': 'destination'}
+
+
 def test_busy_sends_retry_after_when_known(client, monkeypatch):
     failing(monkeypatch, ProviderBusy('busy', retry_after='30'))
     assert post(client, valid())['Retry-After'] == '30'
