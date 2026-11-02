@@ -40,7 +40,8 @@ export default function App() {
       >
         <SidePanel server={server} search={search} selectedRouteId={selectedRouteId} onSelectRoute={selectRoute} />
       </Box>
-      <Box component="main" sx={{ flex: 1, height: { xs: '70vh', md: 'auto' } }}>
+      {/* On phones the page scrolls, so the map gets a fixed height; flex: 1 there would collapse it to zero. */}
+      <Box component="main" sx={{ flex: { md: 1 }, height: { xs: '70vh', md: 'auto' } }}>
         <MapView plan={plan} selectedRouteId={selectedRouteId} onSelectRoute={selectRoute} />
       </Box>
     </Box>

@@ -1,4 +1,5 @@
 import { Layer, Source } from 'react-map-gl/maplibre'
+import { memo } from 'react'
 import type { FeatureCollection, Point } from 'geojson'
 import type { CheckpointProps } from '../../map/geojson'
 import { CHECKPOINT_LAYER, onRoute, riskColorExpression } from '../../map/styles'
@@ -10,7 +11,7 @@ interface Props {
 
 // One circle per checkpoint, drawn by the GPU. The selected route's checkpoints are full size; the rest
 // shrink and fade. Only these paint values change on selection.
-export default function CheckpointLayer({ data, selectedRouteId }: Props) {
+function CheckpointLayer({ data, selectedRouteId }: Props) {
   const isSelected = onRoute(selectedRouteId)
 
   return (
@@ -28,3 +29,6 @@ export default function CheckpointLayer({ data, selectedRouteId }: Props) {
     </Source>
   )
 }
+
+// memo: skip re-rendering when the props are unchanged, e.g. while the map is hovered.
+export default memo(CheckpointLayer)

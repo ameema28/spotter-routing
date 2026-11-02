@@ -5,7 +5,7 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
-import { useState, type ReactNode } from 'react'
+import { memo, useState, type ReactNode } from 'react'
 import { RISK_LEGEND } from '../../risk'
 import { OTHER_ROUTE_COLOR, STOP_PIN } from '../../map/styles'
 import { TruckDot } from './TruckMarkers'
@@ -25,15 +25,15 @@ function Row({ swatch, children }: { swatch: ReactNode; children: ReactNode }) {
 
 const dot = (color: string) => <Box sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: color }} />
 
-// Top-left, away from the slider at the bottom. Open on wide screens, a small button on phones.
-export default function MapLegend({ recommendedLabel }: { recommendedLabel: string | null }) {
+// Top-left, away from the slider at the bottom. Open on large screens, a small button below that.
+function MapLegend({ recommendedLabel }: { recommendedLabel: string | null }) {
   const theme = useTheme()
-  const wide = useMediaQuery(theme.breakpoints.up('md'))
+  const wide = useMediaQuery(theme.breakpoints.up('lg'))
   const [open, setOpen] = useState<boolean | null>(null)
   const isOpen = open ?? wide
   const toggle = (
     <Button size="small" onClick={() => setOpen(!isOpen)} aria-expanded={isOpen}
-      sx={{ textTransform: 'none', minWidth: 0, px: 1, py: 0.25 }}>
+      sx={{ minWidth: 0, px: 1, py: 0.25 }}>
       {isOpen ? 'Hide legend' : 'Legend'}
     </Button>
   )
@@ -42,7 +42,7 @@ export default function MapLegend({ recommendedLabel }: { recommendedLabel: stri
     return <Paper elevation={2} sx={{ position: 'absolute', left: 12, top: 12 }}>{toggle}</Paper>
   }
   return (
-    <Paper elevation={2} sx={{ position: 'absolute', left: 12, top: 12, width: 220, p: 1 }}>
+    <Paper elevation={2} sx={{ position: 'absolute', left: 12, top: 12, width: 240, p: 1 }}>
       <Stack spacing={0.75}>
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 0.25, columnGap: 1 }}>
           {RISK_LEGEND.map((risk) => <Row key={risk.label} swatch={dot(risk.color)}>{risk.label}</Row>)}
@@ -66,3 +66,6 @@ export default function MapLegend({ recommendedLabel }: { recommendedLabel: stri
     </Paper>
   )
 }
+
+// memo: skip re-rendering when the props are unchanged, e.g. while the map is hovered.
+export default memo(MapLegend)

@@ -3,11 +3,10 @@ import { useTheme } from '@mui/material/styles'
 import { Marker } from 'react-map-gl/maplibre'
 import type { Route } from '../../api/types'
 import { formatMiles, routeTitle } from '../../format'
-import { truckState } from '../../map/truck'
+import type { TruckState } from '../../map/truck'
 
 interface Props {
-  routes: Route[]
-  time: number
+  trucks: { route: Route; state: TruckState }[]
   selectedRouteId: number | null
 }
 
@@ -21,14 +20,14 @@ export function TruckDot({ selected, color }: { selected: boolean; color: string
 }
 
 // One marker per route (3 at most), so plain React markers are cheap even while the slider moves.
-export default function TruckMarkers({ routes, time, selectedRouteId }: Props) {
+// zIndex keeps them under the stop and place pins, which carry text that must stay readable.
+export default function TruckMarkers({ trucks, selectedRouteId }: Props) {
   const theme = useTheme()
-  return routes.map((route) => {
-    const truck = truckState(route, time)
+  return trucks.map(({ route, state }) => {
     const selected = route.id === selectedRouteId
-    const tooltip = `${routeTitle(route.label)}: mile ${formatMiles(truck.mile)}, ${truck.status}`
+    const tooltip = `${routeTitle(route.label)}: mile ${formatMiles(state.mile)}, ${state.status}`
     return (
-      <Marker key={route.id} longitude={truck.lngLat[0]} latitude={truck.lngLat[1]} anchor="center"
+      <Marker key={route.id} longitude={state.lngLat[0]} latitude={state.lngLat[1]} anchor="center"
         style={{ zIndex: selected ? 2 : 1 }}>
         <Box title={tooltip} aria-label={tooltip} role="img">
           <TruckDot selected={selected} color={selected ? theme.palette.primary.main : '#5f6b7a'} />

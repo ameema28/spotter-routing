@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { RoutePlan } from '../api/types'
 import samplePlan from '../fixtures/sample-plan.json'
 import { pointAtMile } from './geojson'
-import { mileAtTime, truckState } from './truck'
+import { mileAtTime, truckState, truckTimeline } from './truck'
 
 // JSON imports widen literal types ("mapbox" becomes string), so the fixture needs a cast.
 const route = (samplePlan as unknown as RoutePlan).routes[0]
@@ -43,6 +43,14 @@ describe('mileAtTime', () => {
     const [a, b] = route.checkpoints.slice(1, 3)
     const halfway = (ms(a.eta) + ms(b.eta)) / 2
     expect(mileAtTime(route, halfway)).toBeCloseTo((a.mile + b.mile) / 2, 6)
+  })
+})
+
+describe('truckTimeline', () => {
+  it('precomputes the same state as truckState for every slider hour', () => {
+    const timeline = truckTimeline(route, departure)
+    expect(timeline).toHaveLength(49)
+    timeline.forEach((state, hour) => expect(state).toEqual(truckState(route, departure + hour * HOUR)))
   })
 })
 

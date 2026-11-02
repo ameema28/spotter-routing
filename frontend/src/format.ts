@@ -22,12 +22,21 @@ export function placeName(label: string): string {
   return label.replace(/, United States$/, '')
 }
 
+// Creating a formatter costs about 0.3 ms and the slider label needs one on every hour change, so keep one per zone.
+const dateTimeFormats = new Map<string, Intl.DateTimeFormat>()
+
 // timeZone is only passed by tests; the app always shows the browser's own zone.
 export function formatLocalDateTime(iso: string, timeZone?: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
-    timeZoneName: 'short', timeZone,
-  }).format(new Date(iso))
+  const key = timeZone ?? 'local'
+  let format = dateTimeFormats.get(key)
+  if (!format) {
+    format = new Intl.DateTimeFormat('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+      timeZoneName: 'short', timeZone,
+    })
+    dateTimeFormats.set(key, format)
+  }
+  return format.format(new Date(iso))
 }
 
 // For example "America/Chicago (CST)".

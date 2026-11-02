@@ -1,4 +1,5 @@
 import { Marker } from 'react-map-gl/maplibre'
+import { memo } from 'react'
 import type { FeatureCollection, Point } from 'geojson'
 import type { BreakProps, LonLat } from '../../map/geojson'
 import { STOP_PIN } from '../../map/styles'
@@ -11,7 +12,9 @@ interface Props {
 }
 
 // Only the selected route's stops, about 2 per trip, so plain React markers cost nothing here.
-export default function BreakMarkers({ data, selectedRouteId, onOpen }: Props) {
+// The pill floats just above the stop, like a flag, so a truck parked there stays visible; zIndex 3 keeps the
+// pill text above the trucks when they pass close by.
+function BreakMarkers({ data, selectedRouteId, onOpen }: Props) {
   return data.features
     .filter((feature) => feature.properties.routeId === selectedRouteId)
     .map((feature) => {
@@ -20,7 +23,7 @@ export default function BreakMarkers({ data, selectedRouteId, onOpen }: Props) {
       const pin = STOP_PIN[type] ?? STOP_PIN.break
       return (
         <Marker
-          key={`${routeId}-${index}`} longitude={lon} latitude={lat} anchor="center"
+          key={`${routeId}-${index}`} longitude={lon} latitude={lat} anchor="bottom" offset={[0, -8]} style={{ zIndex: 3 }}
           onClick={(event) => {
             // Stop the map's own click handler from closing the popup straight away.
             event.originalEvent.stopPropagation()
@@ -32,3 +35,6 @@ export default function BreakMarkers({ data, selectedRouteId, onOpen }: Props) {
       )
     })
 }
+
+// memo: skip re-rendering when the props are unchanged, e.g. while the map is hovered.
+export default memo(BreakMarkers)

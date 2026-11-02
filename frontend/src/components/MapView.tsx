@@ -16,13 +16,11 @@ import { CHECKPOINT_LAYER, ROUTE_HIT_LAYER } from '../map/styles'
 import { departureOf } from '../timeLabels'
 import BreakMarkers from './map/BreakMarkers'
 import CheckpointLayer from './map/CheckpointLayer'
-import HeatmapLayer from './map/HeatmapLayer'
 import MapLegend from './map/MapLegend'
 import MapPopup from './map/MapPopup'
 import PlaceMarkers from './map/PlaceMarkers'
 import RouteLayers from './map/RouteLayers'
-import TimeSlider from './map/TimeSlider'
-import TruckMarkers from './map/TruckMarkers'
+import TimeOverlay from './map/TimeOverlay'
 
 // OpenFreeMap: no key or sign-up. Positron is muted, so the risk colours stand out.
 // The required OpenMapTiles and OpenStreetMap credit comes from the tile source; MapLibre's default control shows it.
@@ -30,13 +28,12 @@ const BASEMAP_STYLE = 'https://tiles.openfreemap.org/styles/positron'
 
 const CONTINENTAL_US = { longitude: -98.5, latitude: 39.5, zoom: 3.5 }
 const INTERACTIVE_LAYERS = [CHECKPOINT_LAYER, ROUTE_HIT_LAYER]
-const HOUR_MS = 3600 * 1000
 // Room for the overlays, so no pin ends up under them: the slider at the bottom, the open legend top-left on
-// wide screens. The side panel sits beside the map, not over it, so it needs nothing.
+// large screens. The side panel sits beside the map, not over it, so it needs nothing.
 const FIT_PADDING_WIDE = { top: 48, right: 56, bottom: 150, left: 250 }
-const FIT_PADDING_NARROW = { top: 56, right: 40, bottom: 150, left: 40 }
-// Open the page with ?perf=1 to show how long each slider move takes to reach the screen.
-const SHOW_PERF = new URLSearchParams(window.location.search).has('perf')
+// Narrow screens: the start and end pins are centred on their place and about 170 px wide, so half of that is
+// needed at each side, and the top clears the zoom buttons.
+const FIT_PADDING_NARROW = { top: 72, right: 96, bottom: 150, left: 96 }
 const EMPTY_HEATMAP = buildHeatmapGeoJSON({ start: '', hours: [], step_deg: [0, 0], points: [], levels: [] })
 
 interface Props {
@@ -71,20 +68,15 @@ export default function MapView({ plan, selectedRouteId, onSelectRoute }: Props)
   const [loaded, setLoaded] = useState(false)
   const [hovering, setHovering] = useState(false)
   const [popup, setPopup] = useState<OpenPopup | null>(null)
-  // Like the popup, the slider hour belongs to its plan, so each new search starts at departure.
-  const [timeChoice, setTimeChoice] = useState<{ plan: RoutePlan; hour: number } | null>(null)
-  const [showHeatmap, setShowHeatmap] = useState(true)
-  const [lastUpdateMs, setLastUpdateMs] = useState<number | null>(null)
 
   // Built once per plan. Selecting a route or moving the slider changes layer filters and paint values only.
   const data = useMemo(() => (plan ? buildMapData(plan) : null), [plan])
-  const hour = plan && timeChoice?.plan === plan ? timeChoice.hour : 0
   const departure = plan ? departureOf(plan) : null
 
   // Fit to a new plan only, so clicking between routes or resizing never makes the map jump.
   useEffect(() => {
     if (!plan || !loaded) return
-    const wide = window.matchMedia(`(min-width: ${theme.breakpoints.values.md}px)`).matches
+    const wide = window.matchMedia(`(min-width: ${theme.breakpoints.values.lg}px)`).matches
     mapRef.current?.fitBounds(planBounds(plan), { padding: wide ? FIT_PADDING_WIDE : FIT_PADDING_NARROW, duration: 800 })
   }, [plan, loaded, theme])
 
@@ -99,22 +91,6 @@ export default function MapView({ plan, selectedRouteId, onSelectRoute }: Props)
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [visiblePopup])
-
-  const changeHour = useCallback((next: number) => {
-    if (!plan) return
-    const map = mapRef.current?.getMap()
-    if (map && (SHOW_PERF || import.meta.env.DEV)) {
-      // From the slider change to the next frame MapLibre draws, including React's update and the paint change.
-      const started = performance.now()
-      map.once('render', () => {
-        const ms = performance.now() - started
-        if (import.meta.env.DEV) console.debug(`Slider update drawn in ${ms.toFixed(1)} ms`)
-        if (SHOW_PERF) setLastUpdateMs(ms)
-      })
-      map.triggerRepaint()
-    }
-    setTimeChoice({ plan, hour: next })
-  }, [plan])
 
   function handleClick(event: MapLayerMouseEvent) {
     const feature = event.features?.[0]
@@ -132,10 +108,11 @@ export default function MapView({ plan, selectedRouteId, onSelectRoute }: Props)
     onSelectRoute(Number(feature.properties.id))
   }
 
-  function openBreak(routeId: number, index: number, at: LonLat) {
+  // Stable between renders, so the memoised stop markers don't redraw on every hover.
+  const openBreak = useCallback((routeId: number, index: number, at: LonLat) => {
     const stop = plan?.routes.find((route) => route.id === routeId)?.breaks[index]
     if (plan && stop) setPopup({ plan, at, data: breakPopupData(stop) })
-  }
+  }, [plan])
 
   const recommended = plan?.routes.find((route) => route.id === plan.recommendation.route_id)
 
@@ -157,26 +134,19 @@ export default function MapView({ plan, selectedRouteId, onSelectRoute }: Props)
         <NavigationControl position="top-right" showCompass={false} />
         {plan && data && (
           <>
-            <HeatmapLayer data={data.heatmap} hour={hour} visible={showHeatmap && plan.heatmap !== null} />
+            {/* First, so its heatmap layer sits under the routes; it owns the slider hour. */}
+            {departure && (
+              <TimeOverlay plan={plan} departureIso={departure} heatmap={data.heatmap} selectedRouteId={selectedRouteId} />
+            )}
             <RouteLayers data={data.routes} selectedRouteId={selectedRouteId} />
             <CheckpointLayer data={data.checkpoints} selectedRouteId={selectedRouteId} />
             <PlaceMarkers origin={plan.origin} destination={plan.destination} />
             <BreakMarkers data={data.breaks} selectedRouteId={selectedRouteId} onOpen={openBreak} />
-            {departure && (
-              <TruckMarkers routes={plan.routes} time={Date.parse(departure) + hour * HOUR_MS} selectedRouteId={selectedRouteId} />
-            )}
           </>
         )}
         {visiblePopup && <MapPopup at={visiblePopup.at} data={visiblePopup.data} onClose={() => setPopup(null)} />}
       </Map>
       {plan && <MapLegend recommendedLabel={recommended ? routeTitle(recommended.label) : null} />}
-      {plan && departure && (
-        <TimeSlider
-          startIso={departure} hour={hour} onHourChange={changeHour}
-          heatmapAvailable={plan.heatmap !== null} showHeatmap={showHeatmap} onShowHeatmapChange={setShowHeatmap}
-          lastUpdateMs={SHOW_PERF ? lastUpdateMs : null}
-        />
-      )}
     </Box>
   )
 }

@@ -1,4 +1,5 @@
 import { useTheme } from '@mui/material/styles'
+import { memo } from 'react'
 import { Layer, Source } from 'react-map-gl/maplibre'
 import type { FeatureCollection, LineString } from 'geojson'
 import type { RouteProps } from '../../map/geojson'
@@ -10,7 +11,7 @@ interface Props {
 }
 
 // One source for all routes. Changing the selection only changes the filters below, never the data.
-export default function RouteLayers({ data, selectedRouteId }: Props) {
+function RouteLayers({ data, selectedRouteId }: Props) {
   const theme = useTheme()
   const selected = selectedRouteId ?? -1
 
@@ -37,3 +38,6 @@ export default function RouteLayers({ data, selectedRouteId }: Props) {
     </Source>
   )
 }
+
+// memo: skip re-rendering when the props are unchanged, e.g. while the map is hovered.
+export default memo(RouteLayers)

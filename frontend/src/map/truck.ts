@@ -35,6 +35,14 @@ export function mileAtTime(route: Route, time: number): number {
   return before.mile + (next.mile - before.mile) * share
 }
 
+const HOUR_MS = 3600 * 1000
+const SLIDER_HOURS = 48
+
+// The slider only has 49 positions, so work them all out once per plan; moving the slider then just reads one.
+export function truckTimeline(route: Route, departureMs: number): TruckState[] {
+  return Array.from({ length: SLIDER_HOURS + 1 }, (_, hour) => truckState(route, departureMs + hour * HOUR_MS))
+}
+
 export function truckState(route: Route, time: number): TruckState {
   const mile = mileAtTime(route, time)
   const lastEta = Date.parse(route.checkpoints[route.checkpoints.length - 1]?.eta ?? '')

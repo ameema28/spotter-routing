@@ -30,7 +30,9 @@ export function buildHeatmapGeoJSON(heatmap: Heatmap): FeatureCollection<Polygon
   }
 }
 
+// Built once: the 49 colour rules don't depend on the plan, so the slider just picks one.
+const COLOR_BY_HOUR = Array.from({ length: LAST_HOUR + 1 }, (_, hour) => riskColorExpression(['get', `h${hour}`]))
+
 export function heatmapColorExpression(hour: number): ExpressionSpecification {
-  const safeHour = Math.min(LAST_HOUR, Math.max(0, Math.round(hour)))
-  return riskColorExpression(['get', `h${safeHour}`])
+  return COLOR_BY_HOUR[Math.min(LAST_HOUR, Math.max(0, Math.round(hour)))]
 }

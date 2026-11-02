@@ -8,6 +8,11 @@ export const theme = createTheme({
   },
   shape: { borderRadius: 8 },
   spacing: 8,
+  // Sentence case ("Find safest route") reads calmer than MUI's default capitals.
+  components: {
+    MuiButton: { styleOverrides: { root: { textTransform: 'none' } } },
+    MuiToggleButton: { styleOverrides: { root: { textTransform: 'none' } } },
+  },
   typography: {
     fontFamily: 'system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
     h1: { fontSize: '1.375rem', fontWeight: 600, lineHeight: 1.3 },
