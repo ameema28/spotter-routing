@@ -17,10 +17,11 @@ LOCATIONS = json.loads(FIXTURE.read_text(encoding='utf-8'))
 
 
 class FakeResponse:
-    def __init__(self, body=None, status_code=200, headers=None):
+    def __init__(self, body=None, status_code=200, headers=None, text=''):
         self.body = body
         self.status_code = status_code
         self.headers = headers or {}
+        self.text = text
 
     def json(self):
         if self.body is None:
@@ -284,6 +285,32 @@ def test_429_is_a_clear_busy_error_with_no_retry(monkeypatch):
     assert str(caught.value) == 'Weather service is busy — please try again in a minute'
     assert caught.value.retry_after is None
     assert len(calls) == 1
+
+
+def test_429_logs_the_provider_reason_server_side(monkeypatch, caplog):
+    # Which limit was hit (minute, hour or day) is only in the body; users still see the plain busy message.
+    monkeypatch.setattr(openmeteo.requests, 'get', lambda *args, **kwargs: FakeResponse(
+        {'error': True, 'reason': 'Hourly API request limit exceeded. Please try again in the next hour.'},
+        status_code=429, headers={'Retry-After': '1800'}))
+    with caplog.at_level('WARNING', logger='routing.services.openmeteo'), pytest.raises(ProviderBusy) as caught:
+        openmeteo.fetch_hourly(spaced_points(3), 7)
+    assert str(caught.value) == 'Weather service is busy — please try again in a minute'
+    [record] = [record for record in caplog.records if record.name == 'routing.services.openmeteo']
+    assert record.levelname == 'WARNING'
+    message = record.getMessage()
+    assert 'Hourly API request limit exceeded' in message
+    assert '3 locations' in message
+    assert 'Retry-After 1800' in message
+
+
+def test_429_without_a_json_reason_logs_the_start_of_the_body(monkeypatch, caplog):
+    monkeypatch.setattr(openmeteo.requests, 'get', lambda *args, **kwargs: FakeResponse(
+        None, status_code=429, text='<html>' + 'x' * 1000 + '</html>'))
+    with caplog.at_level('WARNING', logger='routing.services.openmeteo'), pytest.raises(ProviderBusy):
+        openmeteo.fetch_hourly([point(32)], 7)
+    message = caplog.records[-1].getMessage()
+    assert '<html>' in message
+    assert len(message) < 400    # a short excerpt, not the whole page
 
 
 def test_429_keeps_retry_after_when_sent(monkeypatch):

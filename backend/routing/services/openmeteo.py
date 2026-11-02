@@ -1,4 +1,5 @@
 """Open-Meteo hourly forecasts, cached per point on a snapped grid (D6 in DECISIONS.md)."""
+import logging
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -14,6 +15,9 @@ MAX_POINTS_PER_REQUEST = 100    # Largest batch proven in the spike; the docs st
 MAX_PARALLEL_BATCHES = 4
 HOURLY_VARIABLES = 'wind_speed_10m,wind_gusts_10m,rain,showers,snowfall'
 BUSY_MESSAGE = 'Weather service is busy — please try again in a minute'
+REASON_EXCERPT_CHARS = 200
+
+logger = logging.getLogger(__name__)
 
 # D6: 0.1 degrees changed risk levels for storm rain while saving almost no points. 0.02 keeps
 # nearly the same de-duplication and stays close to HRRR's 3 km grid.
@@ -84,11 +88,27 @@ def _request_batch(cells: list[Cell], forecast_days: int) -> requests.Response:
     return response
 
 
+def _limit_reason(response: requests.Response) -> str:
+    """Open-Meteo's own words for a 429, e.g. which limit was hit. The body format isn't documented, so
+    fall back to the start of the raw text."""
+    try:
+        body = response.json()
+        if isinstance(body, dict) and body.get('reason'):
+            return str(body['reason'])[:REASON_EXCERPT_CHARS]
+    except ValueError:
+        pass
+    return (response.text or 'no body')[:REASON_EXCERPT_CHARS]
+
+
 def _fetch_batch(cells: list[Cell], forecast_days: int) -> list[HourlyForecast]:
     response = _request_batch(cells, forecast_days)
     # Each location counts against the 600 per minute, so a retry here would only dig deeper.
     if response.status_code == 429:
-        raise ProviderBusy(BUSY_MESSAGE, retry_after=response.headers.get('Retry-After'))
+        retry_after = response.headers.get('Retry-After')
+        # Server log only: tells minute, hour and day limits apart. Users see the plain busy message.
+        logger.warning('Open-Meteo 429 for a batch of %d locations: %s (Retry-After %s)',
+                       len(cells), _limit_reason(response), retry_after or 'not sent')
+        raise ProviderBusy(BUSY_MESSAGE, retry_after=retry_after)
     if response.status_code != 200:
         raise ProviderError(f'Open-Meteo returned HTTP {response.status_code}')
     try:

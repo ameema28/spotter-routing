@@ -175,3 +175,12 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Our own warnings (skipped route candidates, Open-Meteo 429 reasons) go to stderr, which Vercel keeps in its
+# function logs. Server-side only: nothing here reaches API responses.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'loggers': {'routing': {'handlers': ['console'], 'level': 'INFO', 'propagate': False}},
+}
