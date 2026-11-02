@@ -1,8 +1,10 @@
 import Alert from '@mui/material/Alert'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
+import { useState } from 'react'
 import type { RoutePlan } from '../api/types'
 import { placeName } from '../format'
+import { departureNote, departureOf } from '../timeLabels'
 import RecommendationBanner from './RecommendationBanner'
 import RouteCard from './RouteCard'
 
@@ -17,6 +19,10 @@ export default function ResultsPanel({ plan, selectedRouteId, onSelectRoute }: P
     .map((id) => plan.routes.find((route) => route.id === id))
     .filter((route) => route !== undefined)
   const { routing, weather, compute } = plan.timings_ms
+  const departure = departureOf(plan)
+  // The panel mounts afresh for each search, so this is the moment the results were first shown.
+  const [shownAt] = useState(() => new Date())
+  const farNote = departure ? departureNote(departure, shownAt) : null
 
   return (
     <Stack spacing={2}>
@@ -25,6 +31,7 @@ export default function ResultsPanel({ plan, selectedRouteId, onSelectRoute }: P
         {placeName(plan.origin.label)} → {placeName(plan.destination.label)}
       </Typography>
       <RecommendationBanner plan={plan} />
+      {farNote && <Alert severity="info">{farNote}</Alert>}
       {plan.notes.map((note) => <Alert key={note} severity="info">{note}</Alert>)}
       {routesInRankOrder.map((route) => (
         <RouteCard
