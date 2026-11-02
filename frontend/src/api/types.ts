@@ -35,14 +35,26 @@ export interface Break {
   end: string
 }
 
+export interface MilesByLevel {
+  low: number
+  moderate: number
+  high: number
+  severe: number
+  no_travel: number
+  unknown: number
+}
+
 export interface RouteSummary {
   severe_miles: number
   high_miles: number
   no_travel_miles: number
   unknown_miles: number
   avg_risk: number | null
+  // 0 eligible, 1 insufficient forecast data, 2 has No Travel miles.
   tier: number
   flags: ('no_travel' | 'insufficient_data')[]
+  // Sums to the route distance.
+  miles_by_level: MilesByLevel
 }
 
 export interface Route {
@@ -68,6 +80,14 @@ export interface Heatmap {
   points: LatLon[]
   // levels[point][hour], 49 hours per point.
   levels: RiskLevel[][]
+}
+
+export interface RoutePlanRequest {
+  origin: string
+  destination: string
+  departure: string    // ISO 8601 with a UTC offset
+  load_lb: number
+  step_miles: 10 | 25 | 50
 }
 
 export interface RoutePlan {
