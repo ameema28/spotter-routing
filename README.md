@@ -4,7 +4,7 @@ Weather-aware truck routing: compares up to 3 routes and recommends the safest, 
 the load weight and travel time. React + Django.
 
 - **Live app:** https://spotter-routing-ameema.vercel.app
-- **API:** https://spotter-routing-api.vercel.app (health check: `/api/health/`)
+- **API:** https://spotter-routing-api.vercel.app/api/health/ (health check; the root URL has no page)
 - **Loom walkthrough:** https://www.loom.com/share/dd06cacf76684728bac43abc59615a0a
 
 ## What it does
