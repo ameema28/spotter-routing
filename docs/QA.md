@@ -14,11 +14,11 @@ served to the frontend in headless Chrome, so the check costs no live API or wea
 | Risk table (wind, rain, snow) | `backend/routing/domain/risk.py` (D2–D4) | `test_risk.py` (band edges, worst-of, missing data) | Pass |
 | Load rules (≥55 mph; 45–54 mph & >30,000 lb; 35–44 mph & >40,000 lb) | `risk.py`; form helper text | `test_risk.py::test_load_rules`, `::test_load_rule_never_lowers_a_level`, `test_route_assessment.py::test_load_reaches_the_risk_rules`, `::test_heatmap_cells_use_the_load_rules` | Pass |
 | Recommendation order: Severe miles → High miles → avg risk → time | `backend/routing/domain/ranking.py` (D5); banner reason | `test_ranking.py::test_each_pdf_criterion_decides_on_its_own`, `::test_reason_names_the_deciding_criterion`; live c reason "lower average risk", live d "fewer High miles" | Pass |
-| Map: all routes | Route layers, selected solid / others dashed | Screenshots `docs/qa/normal-*.png` | Pass |
-| Map: checkpoints, risk levels, ETAs | Coloured checkpoint dots; popup with ETA, level, driver, wind/rain/snow | `docs/qa/popup-zorder.png`; `frontend/src/map/popups.test.ts` | Pass |
+| Map: all routes | Route layers, selected solid / others dashed | Screenshots `docs/qa/normal-*.jpg` | Pass |
+| Map: checkpoints, risk levels, ETAs | Coloured checkpoint dots; popup with ETA, level, driver, wind/rain/snow | `docs/qa/popup-zorder.jpg`; `frontend/src/map/popups.test.ts` | Pass |
 | Map/panel: route summaries | Route cards (distance, driving, trip, Severe/High/No Travel/Unknown miles, avg risk, risk bar) | Screenshots; `riskShares.test.ts` | Pass |
 | Heatmap along the corridor | Grid squares around the routes (D9, D12) | `test_route_plan.py::test_heatmap_shape`; `map/heatmap.test.ts`; `map/accuracy.test.ts` (95.9% match with checkpoints) | Pass |
-| 0–48 h forecast slider | Slider + Play, trucks move with the hour | `docs/qa/*.png`; keyboard row below; slider perf in D12 | Pass |
+| 0–48 h forecast slider | Slider + Play, trucks move with the hour | `docs/qa/*.jpg`; keyboard row below; slider perf in D12 | Pass |
 | Heatmap still reachable when the weather service is busy | Retry countdown + "Retry now" (D14) | `heatmapRetry.test.ts`, `test_heatmap_view.py`; UI matrix "levels null" | Pass |
 | React frontend + Django backend | `frontend/` (React, MUI, MapLibre), `backend/` (Django + DRF) | Repo | Pass |
 | Deliverables: GitHub repo, hosted app | https://spotter-routing-ameema.vercel.app, https://spotter-routing-api.vercel.app | Live searches below | Pass |
@@ -79,7 +79,6 @@ No console errors in any row (the basemap's own tile requests are excluded).
 - Basemap city labels sit under the route and checkpoints (e.g. "Memphis", "Little Rock").
 - Geocoding is fuzzy by design (Mapbox): a misspelling is matched silently; the matched label is shown, but there is no
   "did you mean" prompt.
-- The screenshots in `docs/qa/` are full-size PNGs (about 1.5 MB together).
 
 ## 4. Lighthouse (live frontend, desktop preset, Lighthouse 12.8.2)
 

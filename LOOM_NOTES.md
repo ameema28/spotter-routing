@@ -22,3 +22,36 @@
 - **UX details:** server wake-up chip, errors under the right field, matched place names (a fuzzy geocode shows), far-departure note beyond 48 h, aligned cards; screenshots checked headless at four slider hours on desktop and phone before each hand-off.
 
 AI use: planned with Claude, built with Claude Code block by block; I chose every decision and reviewed the tests.
+
+## Final Loom outline (target 8–9 min, max 10)
+
+| Time | SHOW | Script (1–2 lines) |
+|---|---|---|
+| 0:00 | README top: live app, API, GitHub | "Weather-aware truck routing in React and Django. It compares 3 routes and recommends the safest one, using weather, load and travel time." |
+| 0:30 | Live app: Dallas → Chicago chip, 40,000 lb, Find safest route | "One request comes back with the routes, checkpoints, stops, ranking and a 48-hour heatmap." |
+| 0:50 | Banner reason, then the cards | "The reason names the criterion that decided it, in the brief's order: Severe miles, High miles, average risk, then time. Each card shows the miles at every risk level." |
+| 1:20 | Click a checkpoint popup and read it line by line | "Mile and level; the ETA from the truck model; why it's this level; wind, rain and snow; and the forecast hours used: rain and snow from the hour ending at or after the ETA, wind from the nearest hour." |
+| 1:50 | Break pills ("30 min", "10 h rest") | "The ETA follows hours-of-service: a 30-minute break after 8 hours of driving and a 10-hour rest after 11." |
+| 2:10 | Slider + Play; drag across T+11.5–21.5 h | "The heatmap and the trucks move through 48 hours. During the 10-hour rest the truck stays parked, because its position follows the ETAs and the stops." |
+| 2:35 | Open `?perf=1`, drag | "About 2.6 ms of React work per move, drawn in the next frame: the squares store all 49 hours and the slider only changes which hour the colour reads." |
+| 2:50 | Mention the retry (or show `docs/qa` countdown) | "If the weather service is busy, the routes still arrive and the heatmap retries itself after a minute, without a new search." |
+| 3:00 | `backend/tests/test_risk.py` edge rows next to the PDF table | "Shared edges like 25 mph or 0.25 in/hr needed one rule: the lower edge is inclusive, and every edge is tested." |
+| 3:40 | `risk.py` load rules; `test_load_rule_never_lowers_a_level` | "The worst of wind, rain and snow, then the load rules, which can only raise a level. Missing data is Unknown, never Low." |
+| 4:00 | Truck ETA: Dallas–Chicago 15 h driving → 26 h trip | "65 mph cap plus federal hours-of-service, checked against FMCSA and the eCFR. It changes the forecast hour at most checkpoints." |
+| 4:20 | `ranking.py`: tiers + tie-breaks | "Clean routes first, then too many unknown miles, then No Travel; the brief's order inside each tier. If no clean route exists, nothing is recommended." |
+| 4:40 | Third route (via hubs) on the map / D7 | "Mapbox gives 2 routes, so a third comes from avoid-tolls plus interstate hub vias, accepted at ≤1.25× time and ≤75% overlap." |
+| 5:00 | README Mermaid diagram | "React, MUI and MapLibre on Vercel; Django and DRF as one Vercel function; Mapbox and Open-Meteo behind it." |
+| 5:30 | `build_route_plan` docstring; caching; throttles | "One endpoint, about 11 KB gzipped. Weather is cached 30 minutes at 0.02°, and each client is limited to 10 searches a minute to protect the provider quotas." |
+| 6:00 | README performance table, Lighthouse | "Lighthouse 89, 100, 100 on desktop; searches take 2 to 5 seconds live." |
+| 6:30 | Test run output (465 backend, 89 frontend) | "The core logic was written test-first, with no Django imports." |
+| 6:50 | LOOM_NOTES Day 1: deliberate bugs | "I injected 35 deliberate bugs into the logic; the tests caught all of them, and one gap was found and closed." |
+| 7:10 | `docs/QA.md` matrix | "A 28-row UI matrix: rare outcomes, every error, form validation, keyboard and phone, plus 4 live searches." |
+| 7:30 | README limitations | "Trade-offs: car-profile routing, simplified hours-of-service, Open-Meteo's free-tier limits on shared IPs, per-instance cache. Next: a truck routing API, Redis, a paid weather plan." |
+| 8:30 | README AI section | "I planned with Claude and built with Claude Code one block at a time. I made every decision, reviewed the plans and tests, and checked everything in the browser. Thanks for watching." |
+
+### Pre-recording checklist
+- Both Vercel projects show **Ready** after the last push (and no push within an hour of recording: a redeploy clears the cache).
+- One warm-up search on the live site (Dallas → Chicago) so the server and the weather cache are warm.
+- Notifications off; browser zoom 100%.
+- Tabs ready: live app; live app with `?perf=1`; GitHub README; `backend/tests/test_risk.py`; `backend/routing/domain/ranking.py`; DECISIONS.md.
+- Backup screenshots if live weather is calm: `docs/qa/high-severe.jpg` ("Fewest Severe miles", an edited fixture), `docs/qa/all-no-travel.jpg`, `docs/qa/popup-zorder.jpg`. Say they are edited fixtures.

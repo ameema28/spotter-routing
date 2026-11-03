@@ -39,4 +39,6 @@ Max 5 score-affecting decisions per day.
 - Backend 465 tests, frontend 89 tests; D1–D15, minor defaults and the carry-forward list are in DECISIONS.md.
 - Open-Meteo 429s are logged server-side with the provider's reason (Vercel function logs).
 - Heatmap retry: `POST /api/heatmap/` (`build_heatmap_levels` docstring).
-- Next: Day 4 QA pass (PDF requirements, errors, mobile, Lighthouse), final README, Loom, submission.
+- Day 4 QA done (docs/QA.md); README and the Loom outline (LOOM_NOTES.md) are final, with `LOOM_LINK` and
+  `TOTAL_HOURS` placeholders in README.md.
+- Next: record the Loom, fill in the placeholders, submit.
