@@ -7,6 +7,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RoutePlan } from '../api/types'
 import { routeTitle } from '../format'
+import type { HeatmapRetry } from '../heatmapRetry'
 import {
   planBounds, planToBreaksGeoJSON, planToCheckpointsGeoJSON, planToRoutesGeoJSON, type LonLat,
 } from '../map/geojson'
@@ -38,50 +39,56 @@ const EMPTY_HEATMAP = buildHeatmapGeoJSON({ start: '', hours: [], step_deg: [0, 
 
 interface Props {
   plan: RoutePlan | null
+  searchId: number    // changes once per search, never on a heatmap retry
+  heatmapRetry: { state: HeatmapRetry; retryNow: () => void }
   selectedRouteId: number | null
   onSelectRoute: (id: number) => void
 }
 
 interface OpenPopup {
-  plan: RoutePlan
+  searchId: number
   at: LonLat
   data: PopupData
 }
 
-function buildMapData(plan: RoutePlan) {
+function buildRouteData(plan: RoutePlan) {
   const started = performance.now()
   const data = {
     routes: planToRoutesGeoJSON(plan),
     checkpoints: planToCheckpointsGeoJSON(plan),
     breaks: planToBreaksGeoJSON(plan),
-    // Always a collection, even when empty, so the heatmap layer stays first and under the routes.
-    heatmap: plan.heatmap ? buildHeatmapGeoJSON(plan.heatmap) : EMPTY_HEATMAP,
   }
-  // Shows in the dev console once per search; a route click or slider move should never print it again.
+  // Shows in the dev console once per search; a route click, slider move or heatmap retry should never print it.
   if (import.meta.env.DEV) console.debug(`GeoJSON built in ${(performance.now() - started).toFixed(1)} ms`)
   return data
 }
 
-export default function MapView({ plan, selectedRouteId, onSelectRoute }: Props) {
+export default function MapView({ plan, searchId, heatmapRetry, selectedRouteId, onSelectRoute }: Props) {
   const theme = useTheme()
   const mapRef = useRef<MapRef>(null)
   const [loaded, setLoaded] = useState(false)
   const [hovering, setHovering] = useState(false)
   const [popup, setPopup] = useState<OpenPopup | null>(null)
 
-  // Built once per plan. Selecting a route or moving the slider changes layer filters and paint values only.
-  const data = useMemo(() => (plan ? buildMapData(plan) : null), [plan])
+  // Built once per search: within a search the routes never change. Selecting a route or moving the slider
+  // changes layer filters and paint values only, and a heatmap retry only swaps the heatmap source below.
+  // oxlint-disable-next-line react-hooks/exhaustive-deps -- keyed on the search: a retry replaces the plan object
+  const data = useMemo(() => (plan ? buildRouteData(plan) : null), [searchId])
+  // Always a collection, even when empty, so the heatmap layer stays first and under the routes.
+  const heatmap = plan?.heatmap
+  const heatmapData = useMemo(() => (heatmap ? buildHeatmapGeoJSON(heatmap) : EMPTY_HEATMAP), [heatmap])
   const departure = plan ? departureOf(plan) : null
 
-  // Fit to a new plan only, so clicking between routes or resizing never makes the map jump.
+  // Fit to a new search only, so clicking between routes, resizing or a heatmap retry never moves the map.
   useEffect(() => {
     if (!plan || !loaded) return
     const wide = window.matchMedia(`(min-width: ${theme.breakpoints.values.lg}px)`).matches
     mapRef.current?.fitBounds(planBounds(plan), { padding: wide ? FIT_PADDING_WIDE : FIT_PADDING_NARROW, duration: 800 })
-  }, [plan, loaded, theme])
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- keyed on the search: a retry replaces the plan object
+  }, [searchId, loaded, theme])
 
-  // A popup belongs to the plan it was opened on, so it disappears with a new search.
-  const visiblePopup = popup && popup.plan === plan ? popup : null
+  // A popup belongs to the search it was opened on, so it disappears with a new search.
+  const visiblePopup = popup && popup.searchId === searchId ? popup : null
 
   useEffect(() => {
     if (!visiblePopup) return
@@ -101,7 +108,7 @@ export default function MapView({ plan, selectedRouteId, onSelectRoute }: Props)
     if (feature.layer.id === CHECKPOINT_LAYER) {
       const { routeId, index } = feature.properties as { routeId: number; index: number }
       const checkpoint = plan.routes.find((route) => route.id === routeId)?.checkpoints[index]
-      if (checkpoint) setPopup({ plan, at: [checkpoint.lon, checkpoint.lat], data: checkpointPopupData(checkpoint) })
+      if (checkpoint) setPopup({ searchId, at: [checkpoint.lon, checkpoint.lat], data: checkpointPopupData(checkpoint) })
       return
     }
     setPopup(null)
@@ -111,8 +118,8 @@ export default function MapView({ plan, selectedRouteId, onSelectRoute }: Props)
   // Stable between renders, so the memoised stop markers don't redraw on every hover.
   const openBreak = useCallback((routeId: number, index: number, at: LonLat) => {
     const stop = plan?.routes.find((route) => route.id === routeId)?.breaks[index]
-    if (plan && stop) setPopup({ plan, at, data: breakPopupData(stop) })
-  }, [plan])
+    if (plan && stop) setPopup({ searchId, at, data: breakPopupData(stop) })
+  }, [plan, searchId])
 
   const recommended = plan?.routes.find((route) => route.id === plan.recommendation.route_id)
 
@@ -136,7 +143,10 @@ export default function MapView({ plan, selectedRouteId, onSelectRoute }: Props)
           <>
             {/* First, so its heatmap layer sits under the routes; it owns the slider hour. */}
             {departure && (
-              <TimeOverlay plan={plan} departureIso={departure} heatmap={data.heatmap} selectedRouteId={selectedRouteId} />
+              <TimeOverlay
+                plan={plan} searchId={searchId} departureIso={departure} heatmap={heatmapData}
+                heatmapRetry={heatmapRetry} selectedRouteId={selectedRouteId}
+              />
             )}
             <RouteLayers data={data.routes} selectedRouteId={selectedRouteId} />
             <CheckpointLayer data={data.checkpoints} selectedRouteId={selectedRouteId} />

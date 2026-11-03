@@ -3,12 +3,14 @@ import json
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+from django.core.cache import cache
 
 from routing.domain.alternatives import Candidate
 from routing.domain.geometry import GRID_STEPS
-from routing.services import route_plan
+from routing.services import openmeteo, route_plan
 from routing.services.errors import PlaceNotFound, ProviderBusy
 from routing.services.mapbox import Route
 from routing.services.openmeteo import _parse_location
@@ -38,7 +40,8 @@ def far_copy(route):
                  route.seg_durations_s, route.distance_m, route.duration_s * 1.1)
 
 
-FORECAST = _parse_location(json.loads((FIXTURES / 'openmeteo_5pts.json').read_text(encoding='utf-8'))[0])
+RAW_LOCATION = json.loads((FIXTURES / 'openmeteo_5pts.json').read_text(encoding='utf-8'))[0]
+FORECAST = _parse_location(RAW_LOCATION)
 
 
 @pytest.fixture
@@ -165,9 +168,70 @@ def test_heatmap_shape(providers):
 def test_failed_heatmap_keeps_the_answer_and_adds_a_note(providers):
     providers['optional_fails'] = True
     plan = build()
-    assert plan['heatmap'] is None
+    assert plan['heatmap']['levels'] is None
     assert plan['recommendation']['route_id'] is not None
     assert 'Heatmap unavailable: weather service is busy' in plan['notes']
+
+
+def test_failed_heatmap_still_sends_the_grid_for_a_retry(providers):
+    providers['optional_fails'] = True
+    heatmap = build()['heatmap']
+    assert heatmap['start'] == DEPARTURE.isoformat()
+    assert len(heatmap['hours']) == 49
+    assert 0 < len(heatmap['points']) <= 250
+    assert tuple(heatmap['step_deg']) in GRID_STEPS
+
+
+def retry_grid(providers):
+    """The grid a failed plan sent, as the frontend posts it back."""
+    providers['optional_fails'] = True
+    return build()['heatmap']['points']
+
+
+def test_retry_levels_match_the_plan_rules(providers, monkeypatch):
+    points = retry_grid(providers)
+    monkeypatch.setattr(route_plan, 'fetch_hourly', lambda points, days: [FORECAST] * len(points))
+    providers['optional_fails'] = False
+    result = route_plan.build_heatmap_levels(points, DEPARTURE, 40_000)
+    assert result == {'levels': build()['heatmap']['levels']}
+
+
+def test_retry_reuses_cached_cells_without_calling_the_weather_service(providers, monkeypatch):
+    points = retry_grid(providers)
+    cache.set_many({openmeteo._cache_key(openmeteo._cell({'lat': lat, 'lon': lon}), route_plan.FORECAST_DAYS):
+                    FORECAST for lat, lon in points})
+
+    def no_call(*args, **kwargs):
+        raise AssertionError('cached cells must not be fetched again')
+
+    monkeypatch.setattr(openmeteo.requests, 'get', no_call)
+    result = route_plan.build_heatmap_levels(points, DEPARTURE, 40_000)
+    assert len(result['levels']) == len(points)
+
+
+def test_retry_fetches_only_the_missing_cells(providers, monkeypatch):
+    points = retry_grid(providers)
+    cached = points[:-2]
+    cache.set_many({openmeteo._cache_key(openmeteo._cell({'lat': lat, 'lon': lon}), route_plan.FORECAST_DAYS):
+                    FORECAST for lat, lon in cached})
+    requested = []
+
+    def fake_get(url, params=None, timeout=None):
+        requested.extend(params['latitude'].split(','))
+        return SimpleNamespace(status_code=200, headers={}, json=lambda: [RAW_LOCATION] * 2)
+
+    monkeypatch.setattr(openmeteo.requests, 'get', fake_get)
+    route_plan.build_heatmap_levels(points, DEPARTURE, 40_000)
+    assert len(requested) == 2
+
+
+def test_retry_raises_busy_on_a_429(providers, monkeypatch):
+    points = retry_grid(providers)
+    busy = SimpleNamespace(status_code=429, headers={'Retry-After': '60'}, text='', json=lambda: {})
+    monkeypatch.setattr(openmeteo.requests, 'get', lambda *args, **kwargs: busy)
+    with pytest.raises(ProviderBusy) as error:
+        route_plan.build_heatmap_levels(points, DEPARTURE, 40_000)
+    assert error.value.retry_after == '60'
 
 
 def test_weather_is_fetched_once_with_the_fixed_range(providers):

@@ -78,7 +78,19 @@ export interface Heatmap {
   // Grid spacing in degrees; each point is the centre of a cell this size.
   step_deg: LatLon
   points: LatLon[]
-  // levels[point][hour], 49 hours per point.
+  // levels[point][hour], 49 hours per point. null when the weather service was busy: the grid is still sent,
+  // so POST /api/heatmap/ can fill it in without a new search (D14).
+  levels: RiskLevel[][] | null
+}
+
+export interface HeatmapRequest {
+  points: LatLon[]
+  step_deg: LatLon
+  departure: string
+  load_lb: number
+}
+
+export interface HeatmapLevels {
   levels: RiskLevel[][]
 }
 

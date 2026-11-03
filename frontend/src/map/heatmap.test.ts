@@ -28,7 +28,11 @@ describe('buildHeatmapGeoJSON', () => {
 
   it('stores the level for every hour, so the slider never rebuilds the data', () => {
     const props = cells.features[5].properties
-    for (let hour = 0; hour <= 48; hour += 1) expect(props[`h${hour}`]).toBe(heatmap.levels[5][hour])
+    for (let hour = 0; hour <= 48; hour += 1) expect(props[`h${hour}`]).toBe(heatmap.levels![5][hour])
+  })
+
+  it('draws nothing while the levels are still missing', () => {
+    expect(buildHeatmapGeoJSON({ ...heatmap, levels: null }).features).toEqual([])
   })
 })
 

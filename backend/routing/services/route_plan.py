@@ -14,7 +14,7 @@ from routing.domain.route_assessment import RouteAssessment, assess_route, heatm
 from routing.services import mapbox
 from routing.services.candidates import generate_candidates
 from routing.services.errors import PlaceNotFound
-from routing.services.openmeteo import fetch_many
+from routing.services.openmeteo import fetch_hourly, fetch_many
 
 # D9: every location counts against Open-Meteo's 600 per minute, so the grid is what limits fresh
 # searches, not the response size.
@@ -130,15 +130,16 @@ def _route_json(index: int, route: Any, label: str, source: str, assessment: Rou
 
 def _heatmap_json(step: tuple[float, float] | None, grid: list[dict], forecasts: list[Any] | None,
                   departure: datetime, load_lb: float) -> dict | None:
-    if forecasts is None:
+    if step is None:
         return None
-    hours, levels = heatmap_levels(forecasts, departure, load_lb)
+    hours, levels = heatmap_levels(forecasts or [], departure, load_lb)
+    # D14: the grid is sent even when its weather failed, so the frontend can retry just the levels.
     return {
         'start': departure.isoformat(),
         'hours': [hour.isoformat() for hour in hours],
         'step_deg': list(step),
         'points': [[point['lat'], point['lon']] for point in grid],
-        'levels': levels,
+        'levels': None if forecasts is None else levels,
     }
 
 
@@ -163,7 +164,8 @@ def build_route_plan(origin: str, destination: str, departure: datetime, load_lb
     {low, moderate, high, severe, no_travel, unknown}}, checkpoints[]}; ranking (route ids, best first);
     recommendation {route_id or null, reason};
     heatmap {start, hours (49), step_deg [lat, lon] (grid spacing, each point is the centre of a cell this
-    size), points [[lat, lon]], levels (per point, 49 of 0-4 or null)} or null;
+    size), points [[lat, lon]], levels (per point, 49 of 0-4 or null; null as a whole when the heatmap
+    weather failed, then retry with POST /api/heatmap/, see build_heatmap_levels)} or null without a grid;
     notes[]; timings_ms {geocode, routing, weather, compute}.
     Errors are {error}; a place that isn't found also has field: origin or destination (HTTP 422).
     """
@@ -191,7 +193,7 @@ def build_route_plan(origin: str, destination: str, departure: datetime, load_lb
     ranked = rank_routes([assessment.summary for assessment in assessments])
     best, reason = recommend(ranked)
     heatmap = _heatmap_json(step, grid, grid_forecasts, departure, load_lb)
-    if heatmap is None:
+    if grid_forecasts is None:
         notes.append(HEATMAP_UNAVAILABLE_NOTE)
     routes = [_route_json(index, route, label, source, assessments[index], departure)
               for index, (route, label, source) in enumerate(labelled)]
@@ -207,3 +209,15 @@ def build_route_plan(origin: str, destination: str, departure: datetime, load_lb
         'notes': notes,
         'timings_ms': {'geocode': geocode_ms, 'routing': routing_ms, 'weather': weather_ms, 'compute': compute_ms},
     }
+
+
+def build_heatmap_levels(points: list[list[float]], departure: datetime, load_lb: float) -> dict:
+    """Levels for a route plan's heatmap grid whose weather failed: POST /api/heatmap/ (D14).
+
+    Request: {points, step_deg} from the route-plan heatmap, and the search's departure and load_lb.
+    Response: {levels}, in the same shape as the route-plan heatmap levels. No routing calls, and cached
+    cells are reused, so a retry only fetches the cells the failed search didn't get.
+    Errors are {error}: a busy weather service is HTTP 503, as for route-plan.
+    """
+    forecasts = fetch_hourly([{'lat': lat, 'lon': lon} for lat, lon in points], FORECAST_DAYS)
+    return {'levels': heatmap_levels(forecasts, departure, load_lb)[1]}

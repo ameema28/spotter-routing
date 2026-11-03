@@ -39,7 +39,7 @@ it('heatmap cells agree with the checkpoints they cover', () => {
       const cell = cellIndexAt(checkpoint.lat, checkpoint.lon)
       if (hour > 48 || cell < 0) continue
       compared += 1
-      const cellLevel = heatmap.levels[cell][hour]
+      const cellLevel = heatmap.levels![cell][hour]
       if (cellLevel === checkpoint.level) matched += 1
       else mismatches.push(`route ${route.id} mile ${checkpoint.mile} h${hour}: checkpoint ${checkpoint.level}, cell ${cellLevel}`)
     }

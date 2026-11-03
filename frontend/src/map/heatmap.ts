@@ -12,6 +12,9 @@ export const LAST_HOUR = 48
 // property the colour rule reads. Nothing here runs again when the hour changes.
 export function buildHeatmapGeoJSON(heatmap: Heatmap): FeatureCollection<Polygon, HeatmapProps> {
   const [latStep, lonStep] = heatmap.step_deg
+  const { levels } = heatmap
+  // No levels yet (the weather was busy): nothing to colour until a retry fills them in.
+  if (!levels) return { type: 'FeatureCollection', features: [] }
   return {
     type: 'FeatureCollection',
     features: heatmap.points.map(([lat, lon], index) => {
@@ -20,7 +23,7 @@ export function buildHeatmapGeoJSON(heatmap: Heatmap): FeatureCollection<Polygon
       const south = lat - latStep / 2
       const north = lat + latStep / 2
       const properties: HeatmapProps = {}
-      heatmap.levels[index].forEach((level, hour) => { properties[`h${hour}`] = level })
+      levels[index].forEach((level, hour) => { properties[`h${hour}`] = level })
       return {
         type: 'Feature',
         geometry: { type: 'Polygon', coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]] },

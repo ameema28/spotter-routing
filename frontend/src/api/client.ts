@@ -1,5 +1,5 @@
 import { clientError, NETWORK_MESSAGE, toApiError } from './errors'
-import type { RoutePlan, RoutePlanRequest } from './types'
+import type { HeatmapLevels, HeatmapRequest, RoutePlan, RoutePlanRequest } from './types'
 
 const API_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '')
 const MISSING_URL = 'VITE_API_URL is not set. Copy frontend/.env.example to frontend/.env.'
@@ -14,11 +14,11 @@ export async function wakeUp(signal?: AbortSignal): Promise<number> {
 }
 
 // Throws an ApiError the form can show. A cancelled request rejects with the browser's AbortError instead.
-export async function searchRoutes(request: RoutePlanRequest, signal: AbortSignal): Promise<RoutePlan> {
+async function postJson<T>(path: string, request: unknown, signal: AbortSignal): Promise<T> {
   if (!API_URL) throw clientError(MISSING_URL)
   let response: Response
   try {
-    response = await fetch(`${API_URL}/api/route-plan/`, {
+    response = await fetch(`${API_URL}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
@@ -31,5 +31,14 @@ export async function searchRoutes(request: RoutePlanRequest, signal: AbortSigna
   // A host error page may not be JSON; toApiError then falls back to a plain message.
   const body: unknown = await response.json().catch(() => null)
   if (!response.ok) throw toApiError(response.status, body)
-  return body as RoutePlan
+  return body as T
+}
+
+export function searchRoutes(request: RoutePlanRequest, signal: AbortSignal): Promise<RoutePlan> {
+  return postJson<RoutePlan>('/api/route-plan/', request, signal)
+}
+
+// Weather for a plan's heatmap grid only: no new route search (D14).
+export function fetchHeatmapLevels(request: HeatmapRequest, signal: AbortSignal): Promise<HeatmapLevels> {
+  return postJson<HeatmapLevels>('/api/heatmap/', request, signal)
 }

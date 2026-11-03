@@ -36,7 +36,7 @@ Max 5 score-affecting decisions per day.
 
 ## Current state
 - Live: app https://spotter-routing-ameema.vercel.app, API https://spotter-routing-api.vercel.app (API contract: `build_route_plan` docstring).
-- Backend 441 tests, frontend 75 tests; D1–D13, minor defaults and the carry-forward list are in DECISIONS.md.
+- Backend 465 tests, frontend 89 tests; D1–D15, minor defaults and the carry-forward list are in DECISIONS.md.
 - Open-Meteo 429s are logged server-side with the provider's reason (Vercel function logs).
+- Heatmap retry: `POST /api/heatmap/` (`build_heatmap_levels` docstring).
 - Next: Day 4 QA pass (PDF requirements, errors, mobile, Lighthouse), final README, Loom, submission.
-- Day 4 carry-forward also has a heatmap retry endpoint and fewer weather locations per search.

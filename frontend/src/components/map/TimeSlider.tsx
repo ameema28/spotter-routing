@@ -6,15 +6,18 @@ import Stack from '@mui/material/Stack'
 import Switch from '@mui/material/Switch'
 import Typography from '@mui/material/Typography'
 import { memo, useCallback, useEffect, useState } from 'react'
+import type { HeatmapRetry } from '../../heatmapRetry'
 import type { SliderTiming } from '../../hooks/useSliderPerf'
 import { LAST_HOUR } from '../../map/heatmap'
 import { sliderLabel } from '../../timeLabels'
+import HeatmapStatus from './HeatmapStatus'
 
 interface Props {
   startIso: string
   hour: number
   onHourChange: (hour: number) => void
   heatmapAvailable: boolean
+  heatmapRetry: { state: HeatmapRetry; retryNow: () => void }
   showHeatmap: boolean
   onShowHeatmapChange: (show: boolean) => void
   timing: SliderTiming | null    // only set when the page is opened with ?perf=1
@@ -41,9 +44,8 @@ const PlayButton = memo(function PlayButton({ playing, onClick }: { playing: boo
 })
 
 const HeatmapSwitch = memo(function HeatmapSwitch(
-  { available, checked, onChange }: { available: boolean; checked: boolean; onChange: (show: boolean) => void },
+  { checked, onChange }: { checked: boolean; onChange: (show: boolean) => void },
 ) {
-  if (!available) return <Typography variant="caption" color="text.secondary">Heatmap unavailable for this search</Typography>
   return (
     <FormControlLabel
       control={<Switch size="small" checked={checked} onChange={(event) => onChange(event.target.checked)} />}
@@ -54,7 +56,7 @@ const HeatmapSwitch = memo(function HeatmapSwitch(
 })
 
 export default function TimeSlider(props: Props) {
-  const { startIso, hour, onHourChange, heatmapAvailable, showHeatmap, onShowHeatmapChange, timing } = props
+  const { startIso, hour, onHourChange, heatmapAvailable, heatmapRetry, showHeatmap, onShowHeatmapChange, timing } = props
   const [playing, setPlaying] = useState(false)
 
   // Play moves one hour per step and stops at the end.
@@ -80,8 +82,10 @@ export default function TimeSlider(props: Props) {
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
         <PlayButton playing={playing} onClick={togglePlay} />
         <Typography variant="body2" sx={LABEL_SX} aria-live="polite">{sliderLabel(startIso, hour)}</Typography>
-        <HeatmapSwitch available={heatmapAvailable} checked={showHeatmap} onChange={onShowHeatmapChange} />
+        {heatmapAvailable && <HeatmapSwitch checked={showHeatmap} onChange={onShowHeatmapChange} />}
       </Stack>
+      {/* Its own row: the countdown and button don't fit beside the time on a phone. */}
+      {!heatmapAvailable && <HeatmapStatus retry={heatmapRetry.state} onRetryNow={heatmapRetry.retryNow} />}
       <Slider
         size="small" min={0} max={LAST_HOUR} step={1} marks={MARKS} value={hour}
         onChange={(_, value) => onHourChange(value as number)}
