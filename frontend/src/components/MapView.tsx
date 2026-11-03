@@ -30,8 +30,9 @@ const BASEMAP_STYLE = 'https://tiles.openfreemap.org/styles/positron'
 const CONTINENTAL_US = { longitude: -98.5, latitude: 39.5, zoom: 3.5 }
 const INTERACTIVE_LAYERS = [CHECKPOINT_LAYER, ROUTE_HIT_LAYER]
 // Room for the overlays, so no pin ends up under them: the slider at the bottom, the open legend top-left on
-// large screens. The side panel sits beside the map, not over it, so it needs nothing.
-const FIT_PADDING_WIDE = { top: 48, right: 56, bottom: 150, left: 250 }
+// large screens. The side panel sits beside the map, not over it, so it needs nothing. The right side needs half
+// a start or end pin (about 170 px wide, centred on its place) when the trip ends at the right edge.
+const FIT_PADDING_WIDE = { top: 48, right: 96, bottom: 150, left: 250 }
 // Narrow screens: the start and end pins are centred on their place and about 170 px wide, so half of that is
 // needed at each side, and the top clears the zoom buttons.
 const FIT_PADDING_NARROW = { top: 72, right: 96, bottom: 150, left: 96 }
