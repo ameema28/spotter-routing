@@ -5,7 +5,7 @@ the load weight and travel time. React + Django.
 
 - **Live app:** https://spotter-routing-ameema.vercel.app
 - **API:** https://spotter-routing-api.vercel.app (health check: `/api/health/`)
-- **Loom walkthrough:** LOOM_LINK
+- **Loom walkthrough:** https://www.loom.com/share/dd06cacf76684728bac43abc59615a0a
 
 ## What it does
 
@@ -159,4 +159,4 @@ Two Vercel projects from this repo.
 
 I planned the work with Claude (chat) and built it with Claude Code, one block at a time. I made every decision
 (DECISIONS.md), reviewed each plan and the tests before code went in, and checked the results in the browser.
-Time spent: TOTAL_HOURS of the 16-hour limit (log in [PROGRESS.md](PROGRESS.md)).
+Time spent: about 14.75 hours of the 16-hour limit (log in [PROGRESS.md](PROGRESS.md)).
